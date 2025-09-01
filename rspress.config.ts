@@ -20,7 +20,7 @@ export default defineConfig({
       {
         icon: 'github',
         mode: 'link',
-        content: 'https://github.com/HEEKDragonOne/docs-polars-cn',
+        content: 'https://github.com/HEEKDragonOne/polars-doc',
       }
     ],
     // 导航栏显示设置
@@ -36,7 +36,7 @@ export default defineConfig({
     lastUpdatedText: "上次更新时间",
     editLink: {
       text:"📝在 GitHub 上编辑此页",
-      docRepoBaseUrl: "https://github.com/HEEKDragonOne/docs-polars-cn",
+      docRepoBaseUrl: "https://github.com/HEEKDragonOne/polars-doc",
     },
   },
   search: {
