@@ -1,6 +1,6 @@
 ## 基本操作
 
-这一节展示如何在`DataFrame`列上做一些基本操作, 比如基本的算数运算, 执行比较和其他通用操作
+这一节展示如何在`DataFrame`列上做一些基本操作, 比如基本的算数运算, 比较和其他通用操作。
 
 ## 数据准备
 
@@ -42,7 +42,7 @@ shape: (5, 4)
 Polars支持相同长度的Series之间或Series和字面量之间的基本运算。当两者混合时, 字面量会被广播以匹配其所用Series的长度，也就是会将字面量和Series中的每个值都进行操作。如下示例：
 
   - `pl.col("nrs")+5` : 将nrs这一列中的每一个值都+5。
-  - `pl.col("nrs)/pl.col("random")` : 将nrs这一列中的每一个值和random列中对应的值进行除法运算。
+  - `pl.col("nrs")/pl.col("random")` : 将nrs这一列中的每一个值和random列中对应的值进行除法运算。
 
 ```python title="Python"
 result = df.select(
@@ -76,7 +76,7 @@ shape: (5, 6)
 结果中高亮行， 当算术运算中将 `null`作为其操作数之一的时候， 结果为 `null`
 :::
 
-Polars 使用运算符重载，允许在表达式中使用语言的原生算术运算符。可以使用相应的命名函数，如下面的代码片段所示：
+Polars 使用运算符重载，允许在表达式中使用语言的原生算术运算符，也可以使用相应的命名函数，如下面的代码片段所示：
 
 ```python title="Python"
 result = df.select(
@@ -109,10 +109,10 @@ True
 ## 比较
 
 :::tip 提示
-与算数运算一样, Polars支持运算符重载或命名函数来进行比较
+与算数运算一样, Polars支持运算符重载或命名函数来进行比较。
 :::
 
-使用运算符
+使用运算符：
 
 ```python title="Python"
 result = df.select(
@@ -141,9 +141,9 @@ shape: (5, 6)
 └─────────┴──────────┴──────────────┴───────────────┴──────────┴──────────┘
 ```
 
-使用命名函数
+使用命名函数：
 
-```python
+```python title="Python"
 result = df.select(
     (pl.col("nrs").gt(1).alias("nrs > 1")), # greater than
     (pl.col("nrs").ge(3)).alias("nrs >= 3"), # greater than or equal
@@ -172,20 +172,18 @@ shape: (5, 6)
 
 ## 布尔运算和按位运算
 
-[回顾下数据](#数据准备)
-
 ### 布尔运算
 
 :::tip
 
-- 运算符: `&`, `|`, `~`
+- 运算符: `&`, `|`, `~`（分别表示与、或、非）
 - 同名函数: `and_`, `or_`, `not_`
 
 :::
 
-使用运算符
+使用运算符：
 
-```python
+```python title="Python"
 result = df.select(
     ((~pl.col("nrs").is_null()) & (pl.col("groups") == "A"))
     .alias("number not null and group A"),
@@ -211,9 +209,9 @@ shape: (5, 2)
 └─────────────────────────────┴─────────────────────────┘
 ```
 
-使用命名函数, 由于`and`,`or`,`not`是Python的关键字, 所以使用`and_`,`or_`,`not_`
+使用命名函数, 由于`and`,`or`,`not`是Python的关键字, 所以使用`and_`,`or_`,`not_`：
 
-```python
+```python title="Python"
 result2 = df.select(
     (pl.col("nrs").is_null().not_().and_(pl.col("groups") == "A"))
     .alias("number not null and group A"),
@@ -230,7 +228,7 @@ True
 
 ### 位运算
 
-```python
+```python title="Python"
 result = df.select(
     pl.col("nrs"),
     (pl.col("nrs") & 6).alias("nrs & 6"),   # 与运算
@@ -259,11 +257,10 @@ shape: (5, 5)
 
 
 ## 计数(唯一)值
-`n_unique`可用于计算序列中唯一值的确切数量. 但是对于非常大的数据集, 此操作可能会非常缓慢.
 
-在这种情况下, 如果近似值足够好, 可以使用`approx_n_unique`基于`HyperLogLog++`算法的函数来估算结果
+`n_unique`可用于计算序列中唯一值的确切数量。 但是对于非常大的数据集， 此操作可能会非常缓慢。 如果对计算的值准确度不要求或者只需要近似值就行，那么可以使用基于`HyperLogLog++`的`approx_n_unique`函数来估算结果。
 
-```python
+```python title="Python"
 import numpy as np
 import polars as pl
 # 数据准备, 生成10万个随机数
@@ -284,13 +281,13 @@ shape: (1, 2)
 │ ---      ┆ ---             │
 │ u32      ┆ u32             │
 ╞══════════╪═════════════════╡
-│ 63217    ┆ 63699           │
+│ 63218    ┆ 64141           │
 └──────────┴─────────────────┘
 ```
+ 
+> `value_counts`: 获取有关唯一值及其计数的更多信息，以结构体形式返回结果。
 
-### `value_counts`: 获取有关唯一值及其计数的更多信息, `df`依然为最初提供的[数据](#数据准备)
-
-```
+```python title="Python"
 result = df.select(
     pl.col("names").value_counts().alias("value_counts"),
 )
@@ -306,27 +303,24 @@ shape: (4, 1)
 │ struct[2]    │
 ╞══════════════╡
 │ {"ham",1}    │
-│ {"foo",1}    │
-│ {"spam",2}   │
 │ {"egg",1}    │
+│ {"spam",2}   │
+│ {"foo",1}    │
 └──────────────┘
 ```
 
+如果只想知道唯一值有什么或者只想知道唯一值的具体数量，则可以通过`unique`或`unique_counts`函数实现：
 
-### `unique`,`unique_counts`: 让每个值只出现一次, 并且获取每个值出现的次数
-
-
-```python
+```python title="Python"
 result = df.select(
-    pl.col("names").unique().alias("unique"),
+    pl.col("names").unique(maintain_order=True).alias("unique"),
     pl.col("names").unique_counts().alias("unique_counts"),
 )
 
 print(result)
 ```
-name这一列有两行`spam`, 其余都是一行
 
-```text {9}
+```text
 shape: (4, 2)
 ┌────────┬───────────────┐
 │ unique ┆ unique_counts │
@@ -339,44 +333,114 @@ shape: (4, 2)
 │ egg    ┆ 1             │
 └────────┴───────────────┘
 ```
+::: tip
+在`unique`函数中使用了`maintain_order`参数，它能够使结果顺序和原序列中出现的顺序一致，但存在一定的性能问题。
+:::
+
+
 
 ## 条件语句
-:::note
+:::tip
 
-- Polars通过函数支持条件语句, 有三个函数: `when`,`then`,`otherwise`, 可以链式调用来完成自己的需求
-- Polars不会"只执行满足条件的表达式", 而是: "并行执行所有表达式, 然后根据where条件决定用哪个结果"
+- 涉及到三个函数: `when`、`then`、`otherwise`， 可以链式调用。
+- 对比类似语句：`if`、`else`。对于类似`elif`的效果，Polars通过使用多个`when`和`then`来实现。 
+```bash title="对比"
+flag = 1
+
+# 其他编程语言，如Java
+if(flag==1){
+  ...
+}elif(flag==2){
+  ...
+}elif(flag==3){
+  ...
+}else{
+  ...
+}
+
+# 对比Polars代码
+pl.when(flag==1).then(...)
+  .when(flag==2).then(...)
+  .when(flag==3).then(...)
+  .otherwise(...)
+
+```
 
 :::
 
 
-比如想新增一列color, groups值为A的, 就为red, 否则就为blue
-
-下面的`then()`中如果是字符串, 会被解析为一个列, 如果想填充一个值, 请使用`pl.lit()`
-```python
-df.select(
-    pl.col("groups"),
-    pl.when(pl.col("groups")=="A").then(pl.lit("red")).otherwise(pl.lit("blue"))
+```python title="Python"
+result = df.select(
+    pl.col("nrs"),
+    pl.when(pl.col("nrs") % 2 == 1)
+    .then(3 * pl.col("nrs") + 1)
+    .when(pl.col("nrs") % 2 == 0)
+    .then(2 * pl.col("nrs"))
+    .otherwise(pl.col("nrs") // 2)
+    .alias("Collatz"),
 )
+
+print(result)
 ```
 ```text
 shape: (5, 2)
-┌────────┬─────────┐
-│ groups ┆ literal │
-│ ---    ┆ ---     │
-│ str    ┆ str     │
-╞════════╪═════════╡
-│ A      ┆ red     │
-│ A      ┆ red     │
-│ B      ┆ blue    │
-│ A      ┆ red     │
-│ B      ┆ blue    │
-└────────┴─────────┘
+┌──────┬─────────┐
+│ nrs  ┆ Collatz │
+│ ---  ┆ ---     │
+│ i64  ┆ i64     │
+╞══════╪═════════╡
+│ 1    ┆ 4       │
+│ 2    ┆ 4       │
+│ 3    ┆ 10      │
+│ null ┆ null    │
+│ 5    ┆ 16      │
+└──────┴─────────┘
 ```
 
 :::tip
-Polars是**条件选择**, 而不是条件执行
 
-意思不是: "如果条件满足, 就执行该表达式, 否则就忽略"
+对于每个给定的值，只有当前面的谓词都对该值失败时，Polars 才会考虑链中更深层的替换表达式。
 
-而是: "并行执行所有表达式, 然后根据where条件决定用哪个结果"
 :::
+
+```python title="Python"
+
+np.random.seed(42)  # For reproducibility.
+
+df = pl.DataFrame(
+    {
+        "nrs": [1, 2, 3, None, 2],
+        "names": ["foo", "ham", "spam", "egg", "spam"],
+        "random": np.random.rand(5),
+        "groups": ["A", "A", "B", "A", "B"],
+    }
+)
+
+result = df.select(
+    pl.col("names"),
+    pl.when(pl.col("groups") == "A")
+    .then(pl.lit("AAA"))
+    .when(pl.col("nrs") == 2)
+    .then(pl.lit("BBB"))
+    .otherwise(pl.lit("CCC"))
+    .alias("Collatz"),
+)
+
+print(result)
+
+```
+
+```text
+shape: (5, 2)
+┌───────┬─────────┐
+│ names ┆ Collatz │
+│ ---   ┆ ---     │
+│ str   ┆ str     │
+╞═══════╪═════════╡
+│ foo   ┆ AAA     │
+│ ham   ┆ AAA     │
+│ spam  ┆ CCC     │
+│ egg   ┆ AAA     │
+│ spam  ┆ BBB     │
+└───────┴─────────┘
+```
