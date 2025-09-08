@@ -1,12 +1,27 @@
 [
   {
-    "text": "官方文档",
-    "link": "https://docs.pola.rs",
-    "activeMatch": "/official"
+    "text": "首页",
+    "link": "/",
+    "activeMatch": "/$"
   },
   {
-    "text": "指南",
-    "link": "/guide/",
-    "activeMatch": "/guide/"
+    "text": "墨水记忆",
+    "link": "https://tothefor.com",
+    "activeMatch": "/tothefor"
+  },
+  {
+    "text": "系列指南",
+    "items": [
+      {
+        "text": "Polars 中文文档",
+        "link": "/polars/",
+        "activeMatch": "/polars/"
+      },
+      {
+        "text": "脚本库",
+        "link": "/scripts/",
+        "activeMatch": "/scripts/"
+      }
+    ]
   }
 ]

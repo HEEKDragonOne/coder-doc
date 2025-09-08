@@ -4,10 +4,10 @@ import {defineConfig} from 'rspress/config';
 export default defineConfig({
   root: 'docs',
   // root: path.join(__dirname, 'docs'),
-  title: 'Polars中文指南',
-  description:"polars-python中文指南",
+  title: '中文指南',
+  description:"中文系列指南",
   icon: './docs/public/polars.svg',
-  logoText:"Polars中文指南",
+  logoText:"中文指南",
   logo: {
     light: '/polars.svg',
     dark: '/polars.svg',
@@ -20,7 +20,7 @@ export default defineConfig({
       {
         icon: 'github',
         mode: 'link',
-        content: 'https://github.com/HEEKDragonOne/polars-doc',
+        content: 'https://github.com/HEEKDragonOne/coder-doc',
       }
     ],
     // 导航栏显示设置
@@ -36,7 +36,7 @@ export default defineConfig({
     lastUpdatedText: "上次更新时间",
     editLink: {
       text:"📝在 GitHub 上编辑此页",
-      docRepoBaseUrl: "https://github.com/HEEKDragonOne/polars-doc",
+      docRepoBaseUrl: "https://github.com/HEEKDragonOne/coder-doc",
     },
   },
   search: {

@@ -1,0 +1,14 @@
+[
+  {
+    "type": "file",
+    "name": "index.md",
+    "label": "目录"
+  },
+  {
+    "type": "dir",
+    "name": "elasticsearch",
+    "label": "ElasticSearch",
+    "collapsed": true
+  }
+]
+
