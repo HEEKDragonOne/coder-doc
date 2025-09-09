@@ -6,17 +6,17 @@
   },
   {
     "type": "file",
-    "name": "expression_extensions.mdx",
+    "name": "expression_extensions.md",
     "label": "表达式扩展"
   },
   {
     "type": "file",
-    "name": "casting.mdx",
-    "label": "强制类型转换"
+    "name": "casting.md",
+    "label": "类型强制转换"
   },
   {
     "type": "file",
-    "name": "strings.mdx",
+    "name": "strings.md",
     "label": "字符串"
   },
   {

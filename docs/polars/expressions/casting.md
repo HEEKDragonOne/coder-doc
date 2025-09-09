@@ -1,16 +1,23 @@
-# 强制类型转换
+## 类型强制转换
 
-强制类型转换会将[列的底层数据类型](../concepts/data_types_and_structures.mdx)转换为新的数据类型, 可以通过`cast`函数进行
+强制类型转换会将[列的底层数据类型](../concepts/data_types_and_structures.md)转换为新的数据类型。通过`cast`函数实现，该函数包含一个参数`strict`, 用于确定Polars在遇到无法从源数据类型转换为目标数据类型的值时的行为。默认为`strict=True`, 这意味着 Polars 将抛出一个错误，通知用户转换失败，同时提供无法转换的值的详细信息。如果 `strict=False`，则任何无法转换为目标数据类型的值都将被静默转换为null。
 
-该函数包含一个参数`strict`, 用于确定Polars在遇到无法从源数据类型转换为目标数据类型的值时的行为
+:::tip 
 
-默认为`strict=True`, Polars会抛出错误,通知用户转换失败, 同时提供无法转换的值得相信信息. 否则任何无法转换的值都会被静默转换为null
+- 简单总结就是：默认情况下进行不同类型间的强制转换，如果存在无法强转的情况就会直接报错（例如字符串转数字时，字符串中包含字母）。但是Polars提供了一个`strict`参数，它的本质作用就是遇到无法强转的情况时，是否直接进行报错，如果不报错，那么就会将那些不能强转的值置为null。
+
+- 另外还需要注意一个点：在向下转换时，特别需要注意是否会存在溢出的情况！
+
+- 在向下转换，在一定程度上可以减少内存占用。
+
+:::
+
 
 ## 基本示例
 
-```python
-import polars as pl
+### 数据准备
 
+```python title="Python"
 df = pl.DataFrame(
     {
         "integers": [1, 2, 3],
@@ -35,9 +42,12 @@ shape: (3, 3)
 └──────────┴──────────────┴────────┘
 ```
 
-下面代码将i64类型的数据转换为f32, 将f64转换为i32, 只需要使用`.cast()`方法即可, 需要注意浮点数转换为整数时, 丢失精度
+### 类型转换
 
-```python
+
+下面代码将i64类型的数据转换为f32， 将f64转换为i32， 需要注意浮点数转换为整数时丢失精度：
+
+```python title="Python"
 result = df.select(
     pl.col("integers").cast(pl.Float32).alias("integers_as_floats"),
     pl.col("floats").cast(pl.Int32).alias("floats_as_integers"),
@@ -45,7 +55,7 @@ result = df.select(
 print(result)
 ```
 
-```text {9}
+```text
 shape: (3, 2)
 ┌────────────────────┬────────────────────┐
 │ integers_as_floats ┆ floats_as_integers │
@@ -59,89 +69,31 @@ shape: (3, 2)
 ```
 
 
-## 转换为低容量类型以减少内存占用
+## 向下转换
 
-将i64->i16, f64->f32可以减少内存占用, 又不影响数据精度
+可以通过更改与数值数据类型关联的精度来减少列的内存占用。以下代码演示了如何使用从`Int64`到`Int16`和从`Float64`到`Float32`的转换来降低内存使用量：
 
-:::warning
 
-请确保转换后的数据类型可以容纳数据, 否则Polars会报错
-
-:::
-
-```python
-print(f"类型转换之前内存占用: {df.estimated_size()} bytes")
-
+```python title="Python"
+print(f"Before downcasting: {df.estimated_size()} bytes")
 result = df.with_columns(
     pl.col("integers").cast(pl.Int16),
     pl.col("floats").cast(pl.Float32),
 )
-print(result)
-print(f"类型转换之后内存占用: {result.estimated_size()} bytes")
+print(f"After downcasting: {result.estimated_size()} bytes")
 ```
 
 ```text
-类型转换之前内存占用: 72 bytes
-shape: (3, 3)
-┌──────────┬──────────────┬────────┐
-│ integers ┆ big_integers ┆ floats │
-│ ---      ┆ ---          ┆ ---    │
-│ i16      ┆ i64          ┆ f32    │
-╞══════════╪══════════════╪════════╡
-│ 1        ┆ 10000002     ┆ 4.0    │
-│ 2        ┆ 2            ┆ 5.8    │
-│ 3        ┆ 30000003     ┆ -6.3   │
-└──────────┴──────────────┴────────┘
-类型转换之后内存占用: 42 bytes
-```
-## 转换时类型不匹配报错
-如果转换时数据类型不匹配, Polars会抛出异常, 比如下面的例子中big_integers列转换成i8时, i8类型显然无法容纳第一个值和第三个值
-
-:::tip
-
-自己在使用时, 可以先试用max函数看下最大值, 或者使用`try except`包裹处理错误
-
-:::
-```python
-from polars.exceptions import InvalidOperationError
-
-try:
-    result = df.select(pl.col("big_integers").cast(pl.Int8))
-    print(result)
-except InvalidOperationError as err:
-    print(err)
+Before downcasting: 72 bytes
+After downcasting: 42 bytes
 ```
 
-```text
-conversion from `i64` to `i8` failed in column 'big_integers' for 2 out of 3 values: [10000002, 30000003]
-```
 
-## 使用`strict=False`将溢出值转换为`null`
+## 字符串与数字互转
 
-下面的例子中将i64转换为i8, 第一个和第三个值显然会溢出, 使用`strict=False`可以将溢出值转换为null
-```python
-result = df.select(pl.col("big_integers").cast(pl.Int8, strict=False))
-print(result)
-```
+表示数字的字符串可以通过强制类型转换转换为相应的数据类型。反向转换也是可行的：
 
-```text
-shape: (3, 1)
-┌──────────────┐
-│ big_integers │
-│ ---          │
-│ i8           │
-╞══════════════╡
-│ null         │
-│ 2            │
-│ null         │
-└──────────────┘
-```
-
-## 将字符串转换为数字数据类型
-
-表示数字的字符串可以通过强制类型转换转换为相应的数据类型, 反向转换也是可以的
-
-```python
+```python title="Python"
 df = pl.DataFrame(
     {
         "integers_as_strings": ["1", "2", "3"],
@@ -156,9 +108,7 @@ result = df.select(
     pl.col("floats").cast(pl.String),
 )
 print(result)
-
 ```
-
 ```text
 shape: (3, 3)
 ┌─────────────────────┬───────────────────┬────────┐
@@ -171,7 +121,37 @@ shape: (3, 3)
 │ 3                   ┆ -6.3              ┆ -6.3   │
 └─────────────────────┴───────────────────┴────────┘
 ```
-如果列包含非数字值或者格式错误, Polars会抛出错误并给出详细的错误信息, 可以设置`strict=False`绕过错误获取null值
+如果列包含非数字值或者格式错误, Polars会抛出错误并给出详细的错误信息, 可以设置`strict=False`绕过错误获取null值。
+
+```python titile="Python"
+df = pl.DataFrame(
+    {
+        "integers_as_strings": ["1", "2i", "3"],
+        "floats_as_strings": ["4.0", "5.8f", "-6.3"],
+        "floats": [4.0, 5.8, -6.3],
+    }
+)
+
+result = df.select(
+    pl.col("integers_as_strings").cast(pl.Int32, strict=False),
+    pl.col("floats_as_strings").cast(pl.Float64, strict=False),
+    pl.col("floats").cast(pl.String),
+)
+print(result)
+```
+```text {8}
+shape: (3, 3)
+┌─────────────────────┬───────────────────┬────────┐
+│ integers_as_strings ┆ floats_as_strings ┆ floats │
+│ ---                 ┆ ---               ┆ ---    │
+│ i32                 ┆ f64               ┆ str    │
+╞═════════════════════╪═══════════════════╪════════╡
+│ 1                   ┆ 4.0               ┆ 4.0    │
+│ null                ┆ null              ┆ 5.8    │
+│ 3                   ┆ -6.3              ┆ -6.3   │
+└─────────────────────┴───────────────────┴────────┘
+```
+
 
 ## 布尔类型转换
 
@@ -179,11 +159,11 @@ shape: (3, 3)
 - 布尔转换为数值类型时, true转换为1, false转换为0
 
 
-```python
+```python title="Python"
 df = pl.DataFrame(
     {
         "integers": [-1, 0, 2, 3, 4],
-        "floats": [0.0, 1.0, 2.0, 3.0, 4.1],
+        "floats": [0.0, 1.0, 2.0, 3.0, 4.0],
         "bools": [True, False, True, False, True],
     }
 )
@@ -195,7 +175,6 @@ result = df.select(
 )
 print(result)
 ```
-
 ```text
 shape: (5, 3)
 ┌──────────┬────────┬───────┐
@@ -211,54 +190,53 @@ shape: (5, 3)
 └──────────┴────────┴───────┘
 ```
 
-## 时间数据类型处理
 
-所有时间数据类型的数据在内部都表示为: 从参考时间(纪元)到现在所经过的时间单位数, Unix纪元: `1970 年 1 月 1 日 00:00:00 UTC`
+
+## 日期类型处理
+
+所有日期数据类型的数据在内部都表示为: 从参考时间(纪元)到现在所经过的时间单位数， Unix纪元: `1970 年 1 月 1 日 00:00:00 UTC`。
 
 - `Date`: 存储自纪元以来的天数
 - `Datetime`: 存储自纪元以来的毫秒数(`ms`)
 - `Time`: 时间单位是纳秒(`ns`)
 
-Polars允许在数字类型和事件类型数据之间进行转换
-
-### 标准库datetime基本示例
-
-```python
+```python title="Python"
 from datetime import date, datetime, time
 
 print(date(1970,1,1))
 print(datetime(1970,1,1,0,0,0))
 print(time(0,0,1))
 ```
-
 ```text
 1970-01-01
 1970-01-01 00:00:00
 00:00:01
 ```
 
-### 时间转换为数字
+Polars允许在数字类型和日期数据类型之间进行转换：
 
-```python
+### 日期转为数字
+
+```python title="Python"
 from datetime import date, datetime, time
-import polars as pl
+
 df = pl.DataFrame(
     {
         "date": [
-            date(1970, 1, 1),  # 转换之后是0, 因为是从这天开始计算的
-            date(1970, 1, 10),  # 转换之后是9, 10-1=9, 第九天
+            date(1970, 1, 1),  # epoch
+            date(1970, 1, 10),  # 9 days later
         ],
         "datetime": [
-            datetime(1970, 1, 1, 0, 0, 0),  # 转换之后是0
-            datetime(1970, 1, 1, 0, 1, 0),  # 纪元1分钟之后, 1分钟60秒, 一共是60_000毫秒, 60_000_000毫秒
+            datetime(1970, 1, 1, 0, 0, 0),  # epoch
+            datetime(1970, 1, 1, 0, 1, 0),  # 1 minute later
         ],
         "time": [
-            time(0, 0, 0),  # time计算起点是每天的午夜零点, 转换之后是0
-            time(0, 0, 1),  # 1s之后, 一共是1_000_000_000纳秒
+            time(0, 0, 0),  # reference time
+            time(0, 0, 1),  # 1 second later
         ],
     }
 )
-print(df)
+
 result = df.select(
     pl.col("date").cast(pl.Int64).alias("days_since_epoch"),
     pl.col("datetime").cast(pl.Int64).alias("us_since_epoch"),
@@ -268,15 +246,6 @@ print(result)
 ```
 
 ```text
-shape: (2, 3)
-┌────────────┬─────────────────────┬──────────┐
-│ date       ┆ datetime            ┆ time     │
-│ ---        ┆ ---                 ┆ ---      │
-│ date       ┆ datetime[μs]        ┆ time     │
-╞════════════╪═════════════════════╪══════════╡
-│ 1970-01-01 ┆ 1970-01-01 00:00:00 ┆ 00:00:00 │
-│ 1970-01-10 ┆ 1970-01-01 00:01:00 ┆ 00:00:01 │
-└────────────┴─────────────────────┴──────────┘
 shape: (2, 3)
 ┌──────────────────┬────────────────┬───────────────────┐
 │ days_since_epoch ┆ us_since_epoch ┆ ns_since_midnight │
@@ -288,36 +257,37 @@ shape: (2, 3)
 └──────────────────┴────────────────┴───────────────────┘
 ```
 
-### 时间类型和字符串互转
-- 时间类型转换为字符串: `.str.to_string()`
-- 字符串转换为时间类型: `.str.to_datetime()`
-```python
+### 日期类型和字符串互转
+- 日期类型转换为字符串: `.dt.to_string()`
+- 字符串转换为日期类型: `.str.to_datetime()`
+
+
+```python title="Python"
+from datetime import date
+
 df = pl.DataFrame(
     {
         "date": [date(2022, 1, 1), date(2022, 1, 2)],
-        "string": ["2022-01-01", "2022-01-02"],
-        "time":[time(0,0,0), time(1,0,0)]
+        "string": ["2023-01-01", "2023-01-02"],
     }
 )
 
 result = df.select(
     pl.col("date").dt.to_string("%Y-%m-%d"),
     pl.col("string").str.to_datetime("%Y-%m-%d"),
-    pl.col("time").dt.to_string("%H:%M:%S")
 )
 print(result)
 ```
-
 ```text
-shape: (2, 3)
-┌────────────┬─────────────────────┬──────────┐
-│ date       ┆ string              ┆ time     │
-│ ---        ┆ ---                 ┆ ---      │
-│ str        ┆ datetime[μs]        ┆ str      │
-╞════════════╪═════════════════════╪══════════╡
-│ 2022-01-01 ┆ 2022-01-01 00:00:00 ┆ 00:00:00 │
-│ 2022-01-02 ┆ 2022-01-02 00:00:00 ┆ 01:00:00 │
-└────────────┴─────────────────────┴──────────┘
+shape: (2, 2)
+┌────────────┬─────────────────────┐
+│ date       ┆ string              │
+│ ---        ┆ ---                 │
+│ str        ┆ datetime[μs]        │
+╞════════════╪═════════════════════╡
+│ 2022-01-01 ┆ 2023-01-01 00:00:00 │
+│ 2022-01-02 ┆ 2023-01-02 00:00:00 │
+└────────────┴─────────────────────┘
 ```
 
 :::tip

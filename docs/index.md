@@ -13,7 +13,7 @@ hero:
       text: GitHub
       link: https://github.com/pola-rs/polars
   image:
-    src: /polars_logo_blue.png
+    src: /rspress-icon.png
     alt: Logo
 features:
   - title: Rust编写、超高性能

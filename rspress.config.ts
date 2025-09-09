@@ -4,13 +4,13 @@ import {defineConfig} from 'rspress/config';
 export default defineConfig({
   root: 'docs',
   // root: path.join(__dirname, 'docs'),
-  title: '中文指南',
+  title: '墨水记忆',
   description:"中文系列指南",
-  icon: './docs/public/polars.svg',
-  logoText:"中文指南",
+  icon: './docs/public/rspress-icon.png',
+  logoText:"墨水记忆",
   logo: {
-    light: '/polars.svg',
-    dark: '/polars.svg',
+    light: '/rspress-icon.png',
+    dark: '/rspress-icon.png',
   },
   route: {
     cleanUrls: false,

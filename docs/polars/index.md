@@ -1,5 +1,9 @@
 :::tip 速度极快的 DataFrame 库
 `Polars` 是一个用于处理结构化数据的超快 `DataFrame` 库。其核心使用 `Rust` 编写，并支持 Python、R 和 NodeJS 语言。
+
+- [官方文档](https://docs.pola.rs/)
+- [官网API文档](https://docs.pola.rs/api/python/stable/reference/index.html)
+
 :::
 
 ## 主要特点
