@@ -301,10 +301,8 @@ shape: (4, 6)
 
 ## API文档
 
+:::tip Polars String API 文档
 
-import Link from "../../components/Link";
+[官网文档](https://docs.pola.rs/api/python/stable/reference/expressions/string.html)
 
-<Link
-    href={"https://docs.pola.rs/api/python/stable/reference/expressions/string.html"}
-    description={"Polars String API 文档"}
-/>
+:::
