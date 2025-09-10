@@ -1,0 +1,471 @@
+import {Badge} from '@theme';
+import {Tab, Tabs} from 'rspress/theme';
+
+## 字符串
+
+:::tip
+
+- [字符串函数官方API文档](https://docs.pola.rs/api/python/stable/reference/expressions/string.html)
+
+:::
+
+字符串数据是处理`DataFrame`时经常使用的数据类型， 命名空间`str`提供了字符串处理函数。
+
+由于字符串的长度不可预测， 在其他`DataFrame`库中使用字符串可能会比较低效。 Polars通过遵循Arrow Columnar Format规范来缓解这些低效问题，因此也可以对字符串数据编写高性能的数据查询。Polars 中使用正则表达式，可能需要[参考其语法文档](https://docs.rs/regex/latest/regex/#syntax)来了解其支持哪些功能和标志。特别需要注意的是，Polars 支持的正则表达式风格与 Python 的`re`模块有所不同。
+
+## `str`命名空间
+
+<Badge>
+    <img
+        style={{height: '18px'}}
+        src="/rspress-logo.png"
+    />
+    <span>[str.len_bytes](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.str.len_bytes.html)</span>
+</Badge>
+
+<Badge>
+    <img
+        style={{height: '18px'}}
+        src="/rspress-logo.png"
+    />
+    <span>[str.len_chars](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.str.len_chars.html)</span>
+</Badge>
+
+处理字符串的数据时,可能需要使用到命名空间 `str`， 该命名空间聚合了40多个可用于处理字符串的函数。下面代码片段展示了如何使用命名空间以及函数， 并展示了如何根据字节数和字符数计算列中字符串的长度：
+
+```python title="Python"
+df = pl.DataFrame(
+    {
+        "language": ["English", "Dutch", "Portuguese", "Finish", "chinese","misc"],
+        "fruit": ["pear", "peer", "pêra", "päärynä", "大鸭梨","akwif23!@#$%^&*"],
+    }
+)
+
+result = df.with_columns(
+    pl.col("fruit").str.len_bytes().alias("byte_count"),
+    pl.col("fruit").str.len_chars().alias("letter_count"),
+)
+print(result)
+```
+```text
+shape: (6, 4)
+┌────────────┬─────────────────┬────────────┬──────────────┐
+│ language   ┆ fruit           ┆ byte_count ┆ letter_count │
+│ ---        ┆ ---             ┆ ---        ┆ ---          │
+│ str        ┆ str             ┆ u32        ┆ u32          │
+╞════════════╪═════════════════╪════════════╪══════════════╡
+│ English    ┆ pear            ┆ 4          ┆ 4            │
+│ Dutch      ┆ peer            ┆ 4          ┆ 4            │
+│ Portuguese ┆ pêra            ┆ 5          ┆ 4            │
+│ Finish     ┆ päärynä         ┆ 10         ┆ 7            │
+│ chinese    ┆ 大鸭梨          ┆ 9          ┆ 3            │
+│ misc       ┆ akwif23!@#$%^&* ┆ 15         ┆ 15           │
+└────────────┴─────────────────┴────────────┴──────────────┘
+```
+
+:::tip
+如果只处理ASCII文本, 那么字节数和字符数是一样的, 而且建议使用更快的`str.len_bytes()`。
+:::
+
+
+## 解析字符串
+
+Polars 提供了多种方法来检查和解析字符串列中的元素，例如检查给定子字符串或是否存在，以及对它们进行计数、提取或替换。
+
+### 包含字符串-contains
+
+<Badge>
+    <img
+        style={{height: '18px'}}
+        src="/rspress-logo.png"
+    />
+    <span>[str.contains](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.str.contains.html)</span>
+</Badge>
+
+> Expr.str.contains(
+pattern: str | Expr,
+*,
+literal: bool = False,
+strict: bool = True,
+) → Expr
+
+函数`contains`用来判断目标字符串中是否存在匹配字符串。默认情况下，参数会被当作`正则表达式`进行匹配。如果需要进行包含特殊符号的子字符串匹配时，则还需要添加另外一个参数`literal`，并且将其值设置为`True`。
+
+<Tabs>
+    <Tab label="Python">
+
+        ```python {8,9}
+        result = df.select(
+        pl.col("fruit"),
+        pl.col("fruit").str.starts_with("p").alias("starts_with_p"), # 以p开头
+        pl.col("fruit").str.ends_with("r").alias("ends_with_r"), # 以r结尾
+        pl.col("fruit").str.contains("p..r").alias("p..r"), # "p"和"r"之间可以有任意的两个字符
+        pl.col("fruit").str.contains("e+").alias("e+"), # 至少出现一个"e"
+        pl.col("fruit").str.contains("梨").alias("大鸭梨"), # 是否包含匹配字符串"梨"
+        pl.col("fruit").str.contains("$").alias("special_char_1"),
+        pl.col("fruit").str.contains("$", literal=True).alias("special_char_2") # 是否包含特殊字符$
+        )
+        print(result)
+        ```
+
+    </Tab>
+</Tabs>
+
+```text
+shape: (6, 8)
+┌──────────────┬──────────────┬─────────────┬───────┬───────┬────────┬──────────────┬──────────────┐
+│ fruit        ┆ starts_with_ ┆ ends_with_r ┆ p..r  ┆ e+    ┆ 大鸭梨 ┆ special_char ┆ special_char │
+│ ---          ┆ p            ┆ ---         ┆ ---   ┆ ---   ┆ ---    ┆ _1           ┆ _2           │
+│ str          ┆ ---          ┆ bool        ┆ bool  ┆ bool  ┆ bool   ┆ ---          ┆ ---          │
+│              ┆ bool         ┆             ┆       ┆       ┆        ┆ bool         ┆ bool         │
+╞══════════════╪══════════════╪═════════════╪═══════╪═══════╪════════╪══════════════╪══════════════╡
+│ pear         ┆ true         ┆ true        ┆ true  ┆ true  ┆ false  ┆ true         ┆ false        │
+│ peer         ┆ true         ┆ true        ┆ true  ┆ true  ┆ false  ┆ true         ┆ false        │
+│ pêra         ┆ true         ┆ false       ┆ false ┆ false ┆ false  ┆ true         ┆ false        │
+│ päärynä      ┆ true         ┆ false       ┆ true  ┆ false ┆ false  ┆ true         ┆ false        │
+│ 大鸭梨       ┆ false        ┆ false       ┆ false ┆ false ┆ true   ┆ true         ┆ false        │
+│ akwif23!@#$% ┆ false        ┆ false       ┆ false ┆ false ┆ false  ┆ true         ┆ true         │
+│ ^&*          ┆              ┆             ┆       ┆       ┆        ┆              ┆              │
+└──────────────┴──────────────┴─────────────┴───────┴───────┴────────┴──────────────┴──────────────┘
+```
+
+### 提取字符串-extract
+<Badge>
+    <img
+        style={{height: '18px'}}
+        src="/rspress-logo.png"
+    />
+    <span>[str.extract](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.str.extract.html)</span>
+</Badge>
+<Badge>
+    <img
+        style={{height: '18px'}}
+        src="/rspress-logo.png"
+    />
+    <span>[str.extract_all](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.str.extract_all.html)</span>
+</Badge>
+
+> Expr.str.extract(pattern: IntoExprColumn, group_index: int = 1) → Expr
+
+`str.extract()` 提取正则表达式匹配到的字符串。其中第二个参数`group_index`表示要取的值的索引号，只能选1,0，选零表示返回整个表达式的匹配，选1返回第一个括号里的匹配。
+
+<Tabs>
+    <Tab label="Python">
+
+        ```python
+        df = pl.DataFrame(
+        {
+            "urls": [
+            "http://vote.com/ballon_dor?candidate=messi&ref=polars&candidate=testdm",
+            "http://vote.com/ballon_dor?candidat=jorginho&ref=polars&candidate=testdm",
+            "http://vote.com/ballon_dor?candidate=ronaldo&ref=polars&candidate=testdm",
+            ]
+        }
+        )
+        result = df.select(
+        pl.col("urls").str.extract(r"candidate=(\w+)", group_index=0).alias("url_0"),
+        pl.col("urls").str.extract(r"candidate=(\w+)", group_index=1).alias("url_1"),
+        )
+        print(result)
+        ```
+
+    </Tab>
+</Tabs>
+
+
+```text
+shape: (3, 2)
+┌───────────────────┬─────────┐
+│ url_0             ┆ url_1   │
+│ ---               ┆ ---     │
+│ str               ┆ str     │
+╞═══════════════════╪═════════╡
+│ candidate=messi   ┆ messi   │
+│ candidate=testdm  ┆ testdm  │
+│ candidate=ronaldo ┆ ronaldo │
+└───────────────────┴─────────┘
+```
+如果要提取匹配字符串所有出现的位置，可以使用函数`extract_all`, 返回值是一个列表。
+
+<Tabs>
+    <Tab label="Python">
+
+        ```python
+        df = pl.DataFrame({"text": ["123 bla 45 asd", "xyz 678 910t"]})
+        result = df.select(
+        pl.col("text").str.extract_all(r"(\d+)").alias("extracted_nrs"),
+        )
+        print(result)
+        ```
+
+    </Tab>
+</Tabs>
+
+
+```text
+shape: (2, 1)
+┌────────────────┐
+│ extracted_nrs  │
+│ ---            │
+│ list[str]      │
+╞════════════════╡
+│ ["123", "45"]  │
+│ ["678", "910"] │
+└────────────────┘
+```
+
+### 替换字符串-replace
+
+<Badge>
+    <img
+        style={{height: '18px'}}
+        src="/rspress-logo.png"
+    />
+    <span>[str.replace](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.str.replace.html)</span>
+</Badge>
+<Badge>
+    <img
+        style={{height: '18px'}}
+        src="/rspress-logo.png"
+    />
+    <span>[str.replace_all](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.str.replace_all.html)</span>
+</Badge>
+
+> Expr.str.replace(
+pattern: str | Expr,
+value: str | Expr,
+*,
+literal: bool = False,
+n: int = 1,
+) → Expr
+
+与函数`extract`和`extract_all`类似，Polars 也提供了函数`replace`和`replace_all`来实现字符串的替换。函数`replace`只会进行一次替换，而`replace_all`会替换所有匹配的字符串。
+
+<Tabs>
+    <Tab label="Python">
+
+        ```python
+        df = pl.DataFrame({"text": ["123abc", "abc456"]})
+        result = df.with_columns(
+        pl.col("text").str.replace(r"\d", "-"),
+        pl.col("text").str.replace_all(r"\d", "-").alias("text_replace_all"),
+        )
+        print(result)
+        ```
+
+    </Tab>
+</Tabs>
+
+
+```text
+shape: (2, 2)
+┌──────┬──────────────────┐
+│ text ┆ text_replace_all │
+│ ---  ┆ ---              │
+│ str  ┆ str              │
+╞══════╪══════════════════╡
+│ -abc ┆ ---abc           │
+│ abc- ┆ abc---           │
+└──────┴──────────────────┘
+```
+
+## 修改字符串
+### 大小写转换
+
+<Badge>
+    <img
+        style={{height: '18px'}}
+        src="/rspress-logo.png"
+    />
+    <span>[str.to_lowercase](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.str.to_lowercase.html)</span>
+</Badge>
+<Badge>
+    <img
+        style={{height: '18px'}}
+        src="/rspress-logo.png"
+    />
+    <span>[str.to_titlecase](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.str.to_titlecase.html)</span>
+</Badge>
+<Badge>
+    <img
+        style={{height: '18px'}}
+        src="/rspress-logo.png"
+    />
+    <span>[str.to_uppercase](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.str.to_uppercase.html)</span>
+</Badge>
+
+Polars通过函数 `str.to_lowercase`,`str.to_titlecase()`,  `str.to_uppercase`来实现字符串的大小写转换。
+
+- str.to_titlecase()：将单词首字母大写，其他字母小写。
+- str.to_lowercase()：将字符串全部转换为小写。
+- str.to_uppercase()：将字符串全部转换为大写。
+
+<Tabs>
+    <Tab label="Python">
+
+        ```python
+        addresses = pl.DataFrame(
+        {
+            "addresses": [
+            "128 PERF st",
+            "Rust blVD, 158",
+            "PoLaRs Av, 12",
+            "1042 Query sq",
+            ]
+        }
+        )
+
+        addresses = addresses.select(
+        pl.col("addresses").alias("originals"),
+        pl.col("addresses").str.to_titlecase(),
+        pl.col("addresses").str.to_lowercase().alias("lower"),
+        pl.col("addresses").str.to_uppercase().alias("upper"),
+        )
+        print(addresses)
+        ```
+
+    </Tab>
+</Tabs>
+
+```text
+shape: (4, 4)
+┌────────────────┬────────────────┬────────────────┬────────────────┐
+│ originals      ┆ addresses      ┆ lower          ┆ upper          │
+│ ---            ┆ ---            ┆ ---            ┆ ---            │
+│ str            ┆ str            ┆ str            ┆ str            │
+╞════════════════╪════════════════╪════════════════╪════════════════╡
+│ 128 PERF st    ┆ 128 Perf St    ┆ 128 perf st    ┆ 128 PERF ST    │
+│ Rust blVD, 158 ┆ Rust Blvd, 158 ┆ rust blvd, 158 ┆ RUST BLVD, 158 │
+│ PoLaRs Av, 12  ┆ Polars Av, 12  ┆ polars av, 12  ┆ POLARS AV, 12  │
+│ 1042 Query sq  ┆ 1042 Query Sq  ┆ 1042 query sq  ┆ 1042 QUERY SQ  │
+└────────────────┴────────────────┴────────────────┴────────────────┘
+```
+### 删除首尾字符
+
+Polars在命名空间`str`提供了5各函数, 可以从字符串末尾去除字符
+
+| 功能                  | 行为                |
+|:---------------------:|:-------------------:|
+| `strip_chars`       | 在首尾删除字符集中出现的字符，如果字符集为空，则默认删除空格 |
+| `strip_chars_end`   | 在尾部删除字符集中出现的字符，如果字符集为空，则默认删除空格     |
+| `strip_chars_start` | 在首部删除字符集中出现的字符，如果字符集为空，则默认删除空格       |
+| `strip_prefix`      | 如果以指定字符串开头，则在首部删除出现的该字符串           |
+| `strip_suffix`      | 如果以指定字符串结尾，则在尾部删除出现的该字符串 |
+
+
+```python title="Python"
+addresses = pl.DataFrame(
+    {
+        "addresses": [
+            " 128 PE 123 RF st",
+            "Rust bl 45,6 VD, 158 ",
+            " PoLaRs 56 Av, 12 ",
+            "1042 Query 223,12 sq",
+        ]
+    }
+)
+
+addr = pl.col("addresses")
+chars = ", 0123456789"
+result = addresses.select(
+    addr.str.strip_chars().alias("no_strip"),
+    addr.str.strip_chars_end().alias("no_end"),
+    addr.str.strip_chars_start().alias("no_start"),
+    addr.str.strip_chars(chars).alias("strip"),
+    addr.str.strip_chars_end(chars).alias("end"),
+    addr.str.strip_chars_start(chars).alias("start"),
+    addr.str.strip_prefix("128 ").alias("prefix"),
+    addr.str.strip_suffix(", 158").alias("suffix"),
+)
+print(result)
+```
+```text
+shape: (4, 8)
+┌────────────┬────────────┬────────────┬───────────┬───────────┬───────────┬───────────┬───────────┐
+│ no_strip   ┆ no_end     ┆ no_start   ┆ strip     ┆ end       ┆ start     ┆ prefix    ┆ suffix    │
+│ ---        ┆ ---        ┆ ---        ┆ ---       ┆ ---       ┆ ---       ┆ ---       ┆ ---       │
+│ str        ┆ str        ┆ str        ┆ str       ┆ str       ┆ str       ┆ str       ┆ str       │
+╞════════════╪════════════╪════════════╪═══════════╪═══════════╪═══════════╪═══════════╪═══════════╡
+│ 128 PE 123 ┆ 128 PE 123 ┆ 128 PE 123 ┆ PE 123 RF ┆ 128 PE    ┆ PE 123 RF ┆ 128 PE    ┆ 128 PE    │
+│ RF st      ┆ RF st      ┆ RF st      ┆ st        ┆ 123 RF st ┆ st        ┆ 123 RF st ┆ 123 RF st │
+│ Rust bl    ┆ Rust bl    ┆ Rust bl    ┆ Rust bl   ┆ Rust bl   ┆ Rust bl   ┆ Rust bl   ┆ Rust bl   │
+│ 45,6 VD,   ┆ 45,6 VD,   ┆ 45,6 VD,   ┆ 45,6 VD   ┆ 45,6 VD   ┆ 45,6 VD,  ┆ 45,6 VD,  ┆ 45,6 VD,  │
+│ 158        ┆ 158        ┆ 158        ┆           ┆           ┆ 158       ┆ 158       ┆ 158       │
+│ PoLaRs 56  ┆ PoLaRs 56  ┆ PoLaRs 56  ┆ PoLaRs 56 ┆ PoLaRs 56 ┆ PoLaRs 56 ┆ PoLaRs 56 ┆ PoLaRs 56 │
+│ Av, 12     ┆ Av, 12     ┆ Av, 12     ┆ Av        ┆ Av        ┆ Av, 12    ┆ Av, 12    ┆ Av, 12    │
+│ 1042 Query ┆ 1042 Query ┆ 1042 Query ┆ Query     ┆ 1042      ┆ Query     ┆ 1042      ┆ 1042      │
+│ 223,12 sq  ┆ 223,12 sq  ┆ 223,12 sq  ┆ 223,12 sq ┆ Query     ┆ 223,12 sq ┆ Query     ┆ Query     │
+│            ┆            ┆            ┆           ┆ 223,12 sq ┆           ┆ 223,12 sq ┆ 223,12 sq │
+└────────────┴────────────┴────────────┴───────────┴───────────┴───────────┴───────────┴───────────┘
+```
+
+
+### 切片
+
+<Badge>
+    <img
+        style={{height: '18px'}}
+        src="/rspress-logo.png"
+    />
+    <span>[str.slice](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.str.slice.html)</span>
+</Badge>
+<Badge>
+    <img
+        style={{height: '18px'}}
+        src="/rspress-logo.png"
+    />
+    <span>[str.head](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.str.head.html)</span>
+</Badge>
+<Badge>
+    <img
+        style={{height: '18px'}}
+        src="/rspress-logo.png"
+    />
+    <span>[str.tail](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.str.tail.html)</span>
+</Badge>
+
+除了通过`extract`根据匹配条件进行提取子字符串外，还可以使用`slice`函数指定偏移量获取子字符串。接受起始偏移量和切片的可选长度。如果切片的长度未指定，或者长度超过了字符串的末尾，Polars 会将字符串一直切片到末尾。针对于在字符串首尾进行操作时，专门提供了`head`和`tail`函数。
+
+:::tip
+
+- Expr.str.slice( offset: int | IntoExprColumn, length: int | IntoExprColumn | None = None, ) → Expr：两个参数，第一个参数是起始位置，必须；第二个参数是切取长度，可选。如果切片的长度未指定，或者长度超过了字符串的末尾，Polars 会将字符串一直切片到末尾。当只有起始位置一个参数时，并且又为负数时，则表示获取字符串最后n个字符。
+- Expr.str.head(n: int | IntoExprColumn) → Expr：切取字符串前n个字符。
+- Expr.str.tail(n: int | IntoExprColumn) → Expr：切取字符串最后的n个字符。
+
+> 理解head和tail：本质是通过一个区间获取字符串。
+针对于head，相当于`区间开始坐标固定就是字符串头`，而区间结束坐标就是n的位置。`如果n是正数，就从头往后数n个字符；如果是负数，就从尾往前数n个字符`。
+对于tail，相当于`区间结束坐标固定就是字符串尾`，而区间开始坐标就是n的位置。`如果n是正数，就从尾往前数；如果是负数，就从头往后数`。
+
+
+:::
+
+
+```python title="Python"
+df = pl.DataFrame(
+    {
+        "fruits": ["pear", "mango", "dragonfruit", "passionfruit"],
+        "n": [1, -1, 4, -4],
+    }
+)
+
+result = df.with_columns(
+    pl.col("fruits").str.slice(pl.col("n")).alias("slice"),
+    pl.col("fruits").str.head(pl.col("n")).alias("head"),
+    pl.col("fruits").str.tail(pl.col("n")).alias("tail"),
+)
+print(result)
+```
+```text
+shape: (4, 5)
+┌──────────────┬─────┬─────────┬──────────┬──────────┐
+│ fruits       ┆ n   ┆ slice   ┆ head     ┆ tail     │
+│ ---          ┆ --- ┆ ---     ┆ ---      ┆ ---      │
+│ str          ┆ i64 ┆ str     ┆ str      ┆ str      │
+╞══════════════╪═════╪═════════╪══════════╪══════════╡
+│ pear         ┆ 1   ┆ ear     ┆ p        ┆ r        │
+│ mango        ┆ -1  ┆ o       ┆ mang     ┆ ango     │
+│ dragonfruit  ┆ 4   ┆ onfruit ┆ drag     ┆ ruit     │
+│ passionfruit ┆ -4  ┆ ruit    ┆ passionf ┆ ionfruit │
+└──────────────┴─────┴─────────┴──────────┴──────────┘
+```
+
