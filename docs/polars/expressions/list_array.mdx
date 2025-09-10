@@ -1,19 +1,20 @@
-# 列表和数组
+## 列表和数组
 
-Polars对两种同类容器数据类型提供一流的支持：`List`和`Array`
+::: tip
 
-Polars 支持对这两种数据类型进行许多操作, 并且它们的 API 有所重叠, 因此本用户指南的这一部分旨在阐明何时应选择一种数据类型而不是另一种
+- Polars 有两种容器数据类型, 列表（`List`）和数组（`Array`），两者有很多类似的功能。
+- [官方API-List](https://docs.pola.rs/api/python/stable/reference/api/polars.datatypes.List.html)
+- [官方API-Array](https://docs.pola.rs/api/python/stable/reference/api/polars.datatypes.Array.html)
 
-## 列表与数组
+:::
 
-### 数据类型`List`
 
-`List`: 容纳值为不同长度的但是数据类型一致的一维容器
+### 列表`List`
 
-我们看下面代码, 一共三列, 每一列的元素都是一个列表, 虽然每一列中每个元素的长度可能不同, 但是数据类型是一样的
-```python
+`List`: 存放同一数据类型的`一维`容器，长度可变。
+
+```python title="Python"
 from datetime import datetime
-import polars as pl
 
 df = pl.DataFrame(
     {
@@ -39,10 +40,9 @@ df = pl.DataFrame(
 )
 
 print(df)
-print(df.dtypes)
 ```
 
-```text {12}
+```text
 shape: (4, 3)
 ┌─────────────────────────────────┬───────────────┬───────────────────────┐
 │ names                           ┆ children_ages ┆ medical_appointments  │
@@ -54,19 +54,20 @@ shape: (4, 3)
 │ ["Camila", "Campbell"]          ┆ []            ┆ []                    │
 │ ["Dennis", "Doyle"]             ┆ [8, 11, 18]   ┆ [2022-05-22 16:30:00] │
 └─────────────────────────────────┴───────────────┴───────────────────────┘
-[List(String), List(Int64), List(Datetime(time_unit='us', time_zone=None))]
 ```
 
 :::note
-数据类型`List`与Python的`list`不同, Python的`list`可以是任意类型.
+
+数据类型`List`与Python的`list`不同。
+
 :::
 
-### 数据类型`Array`
+### 数组`Array`
 
-`Array`: 适用于值为已知和固定形状的任意维度的同质容器
+`Array`: 存放同一数据类型的`多维`容器，长度固定。所以适合于已知大小和数据类型的数据存储。
 
 下面代码中, 一共两列, 对于每一列来说, 要求每行的元素长度相同, 数据元素类型相同
-```python
+```python title="Python"
 df = pl.DataFrame(
     {
         "bit_flags": [
@@ -105,13 +106,51 @@ shape: (2, 2)
 │ [true, true, … false] ┆ [[" ", "x", "o"], [" ", "x", "… │
 │ [false, true, … true] ┆ [["o", "x", "x"], [" ", "o", "… │
 └───────────────────────┴─────────────────────────────────┘
-[Array(Boolean, shape=(5,)), Array(String, shape=(3, 3))]
 ```
 
-出于性能原因, Polars不会推断`Array`, 而是默认使用`List`, 在Python中, 此规则的例外是使用`Numpy`数组来构建列时.
-此时Polars会从Numpy获得所有子数组具有相同形状的保证, 因此n+1维度将生成一列n维数组.
+上面示例中，通过`schema`参数显式的指定了`bit_flags`是一维`Boolean`类型的数组,`tic_tac_toe`是三行三列的二维String类型数组。因为通常情况下，出于性能原因， Polars 默认使用`List`，而不是使用`Array`。如下所示：
 
-```python
+```python title="Python"
+df = pl.DataFrame(
+    {
+        "bit_flags": [
+            [True, True, True, True, False],
+            [False, True, True, True, True],
+        ],
+        "tic_tac_toe": [
+            [
+                [" ", "x", "o"],
+                [" ", "x", " "],
+                ["o", "x", " "],
+            ],
+            [
+                ["o", "x", "x"],
+                [" ", "o", "x"],
+                [" ", " ", "o"],
+            ],
+        ],
+    }
+)
+
+print(df)
+```
+
+```text
+shape: (2, 2)
+┌───────────────────────┬─────────────────────────────────┐
+│ bit_flags             ┆ tic_tac_toe                     │
+│ ---                   ┆ ---                             │
+│ list[bool]            ┆ list[list[str]]                 │
+╞═══════════════════════╪═════════════════════════════════╡
+│ [true, true, … false] ┆ [[" ", "x", "o"], [" ", "x", "… │
+│ [false, true, … true] ┆ [["o", "x", "x"], [" ", "o", "… │
+└───────────────────────┴─────────────────────────────────┘
+```
+
+但是，有一个特例。就是当用 NumPy 数组来构建列时：
+
+
+```python title="Python"
 import numpy as np
 
 array = np.arange(0, 120).reshape((5, 2, 3, 4))  # 4D array
@@ -119,19 +158,16 @@ array = np.arange(0, 120).reshape((5, 2, 3, 4))  # 4D array
 print(pl.Series(array).dtype)  # Column with the 3D subarrays
 ```
 
-`Array(Int64, shape=(2, 3, 4))`
-
-### 如何选择
-
-优先选择`Array`, 因为`Array`比`List`内存效率更高, 性能也更好. 如果不能使用`Array`, 就使用`List`(列中的值没有固定形状, 或者需要使用只有`List`才有的功能)
+```text
+Array(Int64, shape=(2, 3, 4))
+```
 
 ## 使用`List`
 
-### 命名空间`list`
-Polars提供了很多函数去处理`List`数据类型, 这些函数在命名空间`list`中
+### 数据准备
+Polars提供了很多函数去处理`List`数据类型, 这些函数在命名空间`list`中。如下是一个不同气象站的天气数据：
 
-下面看官方文档给的示例, 有一列表示气象站的名称, 另外一列表示该站点的观测数据
-```python
+```python title="Python"
 weather = pl.DataFrame(
     {
         "station": [f"Station {idx}" for idx in range(1, 6)],
@@ -161,9 +197,9 @@ shape: (5, 2)
 │ Station 5 ┆ 14 8 E0 16 22 24 E1             │
 └───────────┴─────────────────────────────────┘
 ```
-### 以编程方式创建列表
-当我们想对每个站点捕获的温度进行分析时, 可以先把`temperatures`这一列中的每一行按照空格进行分割组织成列表
-```python
+
+对于上面的示例数据，当想对每个站点捕获的温度进行分析时, 需要先把`temperatures`这一列中的每一行按照空格进行分割成列表：
+```python title="Python"
 weather = weather.with_columns(
     pl.col("temperatures").str.split(" "),
 )
@@ -185,46 +221,18 @@ shape: (5, 2)
 └───────────┴──────────────────────┘
 ```
 
-如果我们想展开温度列表, `explode`方法可以很方便的做到这一点
+### 操作列表
 
-```python
-result = weather.explode("temperatures")
-print(result)
-```
+Polars在命名空间`list`中提供了很多操作列表的函数, 包括和之前处理字符串一样类似功能的`slice`、 `head`、 `tail`等函数。
 
-```text
-shape: (49, 2)
-┌───────────┬──────────────┐
-│ station   ┆ temperatures │
-│ ---       ┆ ---          │
-│ str       ┆ str          │
-╞═══════════╪══════════════╡
-│ Station 1 ┆ 20           │
-│ Station 1 ┆ 5            │
-│ Station 1 ┆ 5            │
-│ Station 1 ┆ E1           │
-│ Station 1 ┆ 7            │
-│ …         ┆ …            │
-│ Station 5 ┆ E0           │
-│ Station 5 ┆ 16           │
-│ Station 5 ┆ 22           │
-│ Station 5 ┆ 24           │
-│ Station 5 ┆ E1           │
-└───────────┴──────────────┘
-```
-
-### 对列表进行操作
-与处理字符串相似, Polars提供了很多针对列表的函数, 在命名空间`list`中, 我们直接看代码
-
-```python
+```python title="Python"
 result = weather.with_columns(
-    pl.col("temperatures").list.head(3).alias("head"),  # 获取前3个元素
-    pl.col("temperatures").list.tail(3).alias("tail"),  # 获取最后3个元素
-    pl.col("temperatures").list.slice(-3, 2).alias("two_next_to_last"),
+    pl.col("temperatures").list.head(3).alias("head"), # 获取列表中的前3个元素
+    pl.col("temperatures").list.tail(3).alias("tail"), # 获取列表中的后3个元素
+    pl.col("temperatures").list.slice(-3, 2).alias("two_next_to_last"), # 从列表倒数第3个开始，连续获取两个元素
 )
 print(result)
 ```
-
 ```text
 shape: (5, 5)
 ┌───────────┬──────────────────────┬────────────────────┬────────────────────┬──────────────────┐
@@ -240,27 +248,61 @@ shape: (5, 5)
 └───────────┴──────────────────────┴────────────────────┴────────────────────┴──────────────────┘
 ```
 
-### 对列表中的元素逐一计算
 
-如果我们想找到错误最多的站点(以E开头的元素), 我们需要这样做:
-    1. 尝试将测量结果转化为数字, 对于失败的会变为`null`(使用`cast`, 指定`strict=False`)
-    2. 按行计算列表中非数字值的数量
-    3. 将此列输出重命名为"error"
+### 列表遍历
 
-`eval`函数用于对列表元素执行操作, 我们可以使用上下文`element`分别引用列表中的每个元素, 然后就可以对元素使用任何Polars表达式了
-直接看代码注释
+:::tip 遐想
 
-```python
+- Python：.apply(lambda x: (x.rate + 1))
+- Java：.forEach(x -> x.rate + 1)
+
+:::
+
+通过`list`命名空间中的`eval`和`element`配合, 可以实现对列表中的每个元素执行操作:
+
+```python title="Python"
+result = weather.with_columns(
+    (pl.col("temperatures").list.eval(pl.element().str.contains("E"))).alias("flag"),
+)
+
+print(result)
+```
+
+```text
+shape: (5, 3)
+┌───────────┬──────────────────────┬─────────────────────────┐
+│ station   ┆ temperatures         ┆ flag                    │
+│ ---       ┆ ---                  ┆ ---                     │
+│ str       ┆ list[str]            ┆ list[bool]              │
+╞═══════════╪══════════════════════╪═════════════════════════╡
+│ Station 1 ┆ ["20", "5", … "20"]  ┆ [false, false, … false] │
+│ Station 2 ┆ ["18", "8", … "40"]  ┆ [false, false, … false] │
+│ Station 3 ┆ ["19", "24", … "22"] ┆ [false, false, … false] │
+│ Station 4 ┆ ["E2", "E0", … "6"]  ┆ [true, true, … false]   │
+│ Station 5 ┆ ["14", "8", … "E1"]  ┆ [false, false, … true]  │
+└───────────┴──────────────────────┴─────────────────────────┘
+```
+
+
+### 统计列表
+
+找出每个站点的气温异常的次数:
+- 将测量结果转化为数字, 异常气温的会变为`null`。（或者直接简单判断是否有字母E）
+- 统计列表中null的数量
+- 将此列输出重命名为"error"
+
+
+```python title="Python"
 result = weather.with_columns(
     pl.col("temperatures")  # 选中temperatures这一列
-        .list               # 获取命名空间 list
-        .eval(              # 使用eval方法, 针对列表中的每个元素进行操作
-            pl.element()    # 获取列表中的元素
-                .cast(pl.Int64, strict=False)   # 转换为数字, 失败的会变为null
-                .is_null()                      # 获取是否为null
-        )
-        .list.sum()                             # 对列表中的元素求和, True为1, False为0
-        .alias("errors"),
+    .list  # 获取命名空间 list
+    .eval(  # 使用eval方法, 针对列表中的每个元素进行操作
+        pl.element()  # 获取列表中的元素
+        .cast(pl.Int64, strict=False)  # 转换为数字, 失败的会变为null
+        .is_null()  # 获取是否为null
+    )
+    .list.sum()  # 对列表中的元素求和, True为1, False为0
+    .alias("errors"),
 )
 print(result)
 ```
@@ -280,25 +322,10 @@ shape: (5, 3)
 └───────────┴──────────────────────┴────────┘
 ```
 
-另一种方法是使用正则表达式来检查测量值是否以字母开头
-
-```python
-result2 = weather.with_columns(
-    pl.col("temperatures")
-        .list.eval(pl.element().str.contains("(?i)[a-z]"))
-        .list.sum()
-        .alias("errors"),
-)
-print(result.equals(result2))
-```
-`True`
-
 ### 逐行计算
-我们可以使用`pl.all()`来引用列表中的所有元素
 
-我们先创建一个包含更多天气数据的`DataFrame`
-
-```python
+创建新数据集：
+```python title="Python"
 weather_by_day = pl.DataFrame(
     {
         "station": [f"Station {idx}" for idx in range(1, 11)],
@@ -309,7 +336,6 @@ weather_by_day = pl.DataFrame(
 )
 print(weather_by_day)
 ```
-
 ```text
 shape: (10, 4)
 ┌────────────┬───────┬───────┬───────┐
@@ -330,9 +356,9 @@ shape: (10, 4)
 └────────────┴───────┴───────┴───────┘
 ```
 
-现在我们计算各个站点每日温度的百分比排名
+现在计算各个站点每日温度的百分比排名：
 
-```python
+```python title="Python"
 rank_pct = (pl.element().rank(descending=True) / pl.element().count()).round(2)
 
 result = weather_by_day.with_columns(
@@ -341,7 +367,6 @@ result = weather_by_day.with_columns(
 ).select(
     # 选择除了 all_temps 这一列之外的所有列
     pl.all().exclude("all_temps"),
-    # compute the rank by calling `list.eval`
     pl.col("all_temps").list.eval(rank_pct, parallel=True).alias("temps_rank"),
 )
 
@@ -369,14 +394,9 @@ shape: (10, 5)
 
 ## 使用 `Array`
 
-Polars通常不会对Array做类型推导, 必须在创建`Series`/`DataFrame`是显式指定数据类型, 或者显式地转换列
-
-### 命名空间`arr`
-下面是一些基本的示例, 展示了几个常见的函数用法
+Polars通常不会对Array做类型推导, 所以必须在创建`Series`/`DataFrame`是显式指定数据类型, 或者使用 NumPy 数组创建该列。
 
 ```python
-import polars as pl
-
 df = pl.DataFrame(
     {
         "first_last": [
@@ -399,11 +419,11 @@ df = pl.DataFrame(
 )
 
 result = df.select(
-    pl.col("first_last").arr.join(" ").alias("name"),   # 对name列按照空格连接
-    pl.col("fav_numbers").arr.sort(),                   # 对fav_numbers列进行排序
-    pl.col("fav_numbers").arr.max().alias("largest_fav"),   # 获取fav_numbers列中每行元素的最大值
-    pl.col("fav_numbers").arr.sum().alias("summed"),        # 对fav_numbers列的每行元素分别进行求和
-    pl.col("fav_numbers").arr.contains(3).alias("likes_3"), # 对fav_numbers列的每行元素进行判断, 是否包含3
+    pl.col("first_last").arr.join(" ").alias("name"),
+    pl.col("fav_numbers").arr.sort(),
+    pl.col("fav_numbers").arr.max().alias("largest_fav"),
+    pl.col("fav_numbers").arr.sum().alias("summed"),
+    pl.col("fav_numbers").arr.contains(3).alias("likes_3"),
 )
 print(result)
 ```

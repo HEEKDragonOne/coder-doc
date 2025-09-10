@@ -428,7 +428,7 @@ shape: (4, 8)
 
 :::tip
 
-- Expr.str.slice( offset: int | IntoExprColumn, length: int | IntoExprColumn | None = None, ) → Expr：两个参数，第一个参数是起始位置，必须；第二个参数是切取长度，可选。如果切片的长度未指定，或者长度超过了字符串的末尾，Polars 会将字符串一直切片到末尾。当只有起始位置一个参数时，并且又为负数时，则表示获取字符串最后n个字符。
+- Expr.str.slice( offset: int | IntoExprColumn, length: int | IntoExprColumn | None = None, ) → Expr：两个参数，第一个参数是起始位置，必须；第二个参数是切取长度，可选。如果切片的长度未指定，或者长度超过了字符串的末尾，Polars 会将字符串一直切片到末尾。如果第一个参数为负数（-n），则表示从字符串倒数第n个字符开始切片。
 - Expr.str.head(n: int | IntoExprColumn) → Expr：切取字符串前n个字符。
 - Expr.str.tail(n: int | IntoExprColumn) → Expr：切取字符串最后的n个字符。
 
