@@ -396,7 +396,7 @@ shape: (10, 5)
 
 Polars通常不会对Array做类型推导, 所以必须在创建`Series`/`DataFrame`是显式指定数据类型, 或者使用 NumPy 数组创建该列。
 
-```python
+```python title="Python"
 df = pl.DataFrame(
     {
         "first_last": [
