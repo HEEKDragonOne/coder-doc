@@ -2,16 +2,16 @@
 pageType: home
 
 hero:
-  name: Polars-Python中文指南
-  text: 新时代的DataFrame
-  tagline: Polars是一个用于数据处理的开源库
+  name: 墨水记忆
+  text: 最好的记忆不如最淡的墨水
+  tagline: The palest ink is better than the best memory. 
   actions:
     - theme: brand
-      text: 快速开始
+      text: 开始学习
       link: /polars/
     - theme: alt
       text: GitHub
-      link: https://github.com/pola-rs/polars
+      link: https://github.com/HEEKDragonOne/coder-doc
   image:
     src: /rspress-icon.png
     alt: Logo

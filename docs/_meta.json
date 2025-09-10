@@ -10,12 +10,17 @@
     "activeMatch": "/tothefor"
   },
   {
-    "text": "系列指南",
+    "text": "笔记指南",
     "items": [
       {
         "text": "Polars 中文文档",
         "link": "/polars/",
         "activeMatch": "/polars/"
+      },
+      {
+        "text": "正则表达式",
+        "link": "/regex/",
+        "activeMatch": "/regex/"
       },
       {
         "text": "脚本库",
