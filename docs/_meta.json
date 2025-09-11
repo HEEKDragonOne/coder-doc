@@ -18,11 +18,6 @@
         "activeMatch": "/polars/"
       },
       {
-        "text": "正则表达式",
-        "link": "/regex/",
-        "activeMatch": "/regex/"
-      },
-      {
         "text": "脚本库",
         "link": "/scripts/",
         "activeMatch": "/scripts/"
