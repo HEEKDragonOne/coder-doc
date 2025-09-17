@@ -26,8 +26,8 @@
   },
   {
     "type": "file",
-    "name": "enum.mdx",
-    "label": "分类数据和枚举"
+    "name": "enum.md",
+    "label": "枚举"
   },
   {
     "type": "file",
