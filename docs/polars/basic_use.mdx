@@ -560,10 +560,10 @@ maintain_order: MaintainOrderJoin | None = None,
 ) → DataFrame
 
 > - other：待关联对象。
-> - on：关联列名。与`left_on`和`right_on`不可同时存在。
-> - how：关联方式，默认内连接(inner)。inner、left、right、full、semi、anti、cross。
-> - left_on：左侧DataFrame中进行关联的列名称。与`on`不可同时存在。
-> - right_on：右侧DataFrame中进行关联的列名称。与`on`不可同时存在。
+> - on：关联列名。当两个关联的对象关联列名相同时可用，如果是多列关联，则\["A","B","C",...]。与`left_on`和`right_on`不可同时存在。
+> - how：关联方式，默认内连接(inner)。inner-内连接、left-左连接、right-右连接、full-全连接、semi-半连接、anti-反连接、cross-笛卡尔积。
+> - left_on：左侧DataFrame中进行关联的列名称，可多列。与`on`不可同时存在。
+> - right_on：右侧DataFrame中进行关联的列名称，可多列。与`on`不可同时存在。
 > - suffix：当存在重复列时，右侧列中重复的列名将会添加该参数值作为后缀。默认：`_right`。
 > - coalesce：当存在重复列时，是否合并重复列。
 > - maintain_order：合并后的数据的排序方式。`left`：按照左侧DataFrame顺序； `right`：按照右侧DataFrame顺序； `left_right`：先按照左侧再按照右侧, `right_left`：先按照右侧再按照左侧。
@@ -591,20 +591,252 @@ df2 = pl.DataFrame(
 
 ### 内连接
 
+```python title="Python"
+result = df1.join(df2, how="inner", on="ham")
+print(result)
+```
+```text
+shape: (2, 4)
+┌─────┬─────┬─────┬───────┐
+│ foo ┆ bar ┆ ham ┆ apple │
+│ --- ┆ --- ┆ --- ┆ ---   │
+│ i64 ┆ f64 ┆ str ┆ str   │
+╞═════╪═════╪═════╪═══════╡
+│ 1   ┆ 6.0 ┆ a   ┆ x     │
+│ 2   ┆ 7.0 ┆ b   ┆ y     │
+└─────┴─────┴─────┴───────┘
+```
+
+
 ### 左连接
+
+```python title="Python"
+result = df1.join(df2, on="ham", how="left")
+print(result)
+```
+```text
+shape: (3, 4)
+┌─────┬─────┬─────┬───────┐
+│ foo ┆ bar ┆ ham ┆ apple │
+│ --- ┆ --- ┆ --- ┆ ---   │
+│ i64 ┆ f64 ┆ str ┆ str   │
+╞═════╪═════╪═════╪═══════╡
+│ 1   ┆ 6.0 ┆ a   ┆ x     │
+│ 2   ┆ 7.0 ┆ b   ┆ y     │
+│ 3   ┆ 8.0 ┆ c   ┆ null  │
+└─────┴─────┴─────┴───────┘
+```
 
 ### 右连接
 
+```python title="Python"
+result = df1.join(df2, on="ham", how="right")
+print(result)
+```
+```text
+shape: (3, 4)
+┌──────┬──────┬───────┬─────┐
+│ foo  ┆ bar  ┆ apple ┆ ham │
+│ ---  ┆ ---  ┆ ---   ┆ --- │
+│ i64  ┆ f64  ┆ str   ┆ str │
+╞══════╪══════╪═══════╪═════╡
+│ 1    ┆ 6.0  ┆ x     ┆ a   │
+│ 2    ┆ 7.0  ┆ y     ┆ b   │
+│ null ┆ null ┆ z     ┆ d   │
+└──────┴──────┴───────┴─────┘
+```
+
+
 ### 全连接
+
+```python title="Python"
+result = df1.join(df2, on="ham", how="full")
+print(result)
+result = df1.join(df2, on="ham", how="full", coalesce=True)
+print(result)
+```
+```text
+shape: (4, 5)
+┌──────┬──────┬──────┬───────┬───────────┐
+│ foo  ┆ bar  ┆ ham  ┆ apple ┆ ham_right │
+│ ---  ┆ ---  ┆ ---  ┆ ---   ┆ ---       │
+│ i64  ┆ f64  ┆ str  ┆ str   ┆ str       │
+╞══════╪══════╪══════╪═══════╪═══════════╡
+│ 1    ┆ 6.0  ┆ a    ┆ x     ┆ a         │
+│ 2    ┆ 7.0  ┆ b    ┆ y     ┆ b         │
+│ null ┆ null ┆ null ┆ z     ┆ d         │
+│ 3    ┆ 8.0  ┆ c    ┆ null  ┆ null      │
+└──────┴──────┴──────┴───────┴───────────┘
+shape: (4, 4)
+┌──────┬──────┬─────┬───────┐
+│ foo  ┆ bar  ┆ ham ┆ apple │
+│ ---  ┆ ---  ┆ --- ┆ ---   │
+│ i64  ┆ f64  ┆ str ┆ str   │
+╞══════╪══════╪═════╪═══════╡
+│ 1    ┆ 6.0  ┆ a   ┆ x     │
+│ 2    ┆ 7.0  ┆ b   ┆ y     │
+│ null ┆ null ┆ d   ┆ z     │
+│ 3    ┆ 8.0  ┆ c   ┆ null  │
+└──────┴──────┴─────┴───────┘
+```
+
 
 ### 半连接
 
+和内连接有点类似，但是结果只返回了左侧DataFrame中的数据。可以将结果与内连接的结果进行对比。
+
+```python title="Python"
+result = df1.join(df2, on="ham", how="semi")
+print(result)
+```
+```text
+shape: (2, 3)
+┌─────┬─────┬─────┐
+│ foo ┆ bar ┆ ham │
+│ --- ┆ --- ┆ --- │
+│ i64 ┆ f64 ┆ str │
+╞═════╪═════╪═════╡
+│ 1   ┆ 6.0 ┆ a   │
+│ 2   ┆ 7.0 ┆ b   │
+└─────┴─────┴─────┘
+```
+
+
 ### 反连接
+
+和半连接类似，半连接返回的是匹配的左侧DataFrame中的数据；而反连接返回的是不匹配的左侧DataFrame中的数据。
+
+```python title="Python"
+result = df1.join(df2, on="ham", how="anti")
+print(result)
+```
+```text
+shape: (1, 3)
+┌─────┬─────┬─────┐
+│ foo ┆ bar ┆ ham │
+│ --- ┆ --- ┆ --- │
+│ i64 ┆ f64 ┆ str │
+╞═════╪═════╪═════╡
+│ 3   ┆ 8.0 ┆ c   │
+└─────┴─────┴─────┘
+```
+
+
 
 ### 笛卡尔积
 
+```python title="Python"
+result = df1.join(df2, how="cross")
+print(result)
+```
+```text
+shape: (9, 5)
+┌─────┬─────┬─────┬───────┬───────────┐
+│ foo ┆ bar ┆ ham ┆ apple ┆ ham_right │
+│ --- ┆ --- ┆ --- ┆ ---   ┆ ---       │
+│ i64 ┆ f64 ┆ str ┆ str   ┆ str       │
+╞═════╪═════╪═════╪═══════╪═══════════╡
+│ 1   ┆ 6.0 ┆ a   ┆ x     ┆ a         │
+│ 1   ┆ 6.0 ┆ a   ┆ y     ┆ b         │
+│ 1   ┆ 6.0 ┆ a   ┆ z     ┆ d         │
+│ 2   ┆ 7.0 ┆ b   ┆ x     ┆ a         │
+│ 2   ┆ 7.0 ┆ b   ┆ y     ┆ b         │
+│ 2   ┆ 7.0 ┆ b   ┆ z     ┆ d         │
+│ 3   ┆ 8.0 ┆ c   ┆ x     ┆ a         │
+│ 3   ┆ 8.0 ┆ c   ┆ y     ┆ b         │
+│ 3   ┆ 8.0 ┆ c   ┆ z     ┆ d         │
+└─────┴─────┴─────┴───────┴───────────┘
+```
 
+### 参考示例
 
+```python title="Python"
+# 员工表（左表）：包含 user_id、dept_id 作为联合键
+df_employees = pl.DataFrame({
+    "user_id": [1, 2, 2, 3, 4],
+    "dept_id": [10, 20, 20, 30, 40],  # 部门ID，与 user_id 组成联合键
+    "name": ["张三", "李四", "李四", "王五", "赵六"],
+    "age": [25, 30, 30, 35, 40]
+})
+
+# 绩效表（右表）：同样包含 user_id、dept_id 作为联合键
+df_performance = pl.DataFrame({
+    "user_id": [2, 2, 3, 5],
+    "dept_id": [20, 20, 30, 50],  # 需与左表的 dept_id 共同匹配
+    "score": [85, 90, 88, 92],  # 绩效分数
+    "review": ["良好", "优秀", "良好", "优秀"]
+})
+
+inner_join = df_employees.join(
+    df_performance,
+    on=["user_id", "dept_id"],  # 多列关联：同时匹配 user_id 和 dept_id
+    how="inner"
+)
+print("内连接（多列匹配）结果:")
+print(inner_join)
+
+left_join = df_employees.join(
+    df_performance,
+    on=["user_id", "dept_id"],
+    how="left"
+)
+
+print("左连接（多列匹配）结果:")
+print(left_join)
+
+right_join = df_employees.join(
+    df_performance,
+    on=["user_id", "dept_id"],
+    how="right"
+)
+
+print("右连接（多列匹配）结果:")
+print(right_join)
+```
+```text
+内连接（多列匹配）结果:
+shape: (5, 6)
+┌─────────┬─────────┬──────┬─────┬───────┬────────┐
+│ user_id ┆ dept_id ┆ name ┆ age ┆ score ┆ review │
+│ ---     ┆ ---     ┆ ---  ┆ --- ┆ ---   ┆ ---    │
+│ i64     ┆ i64     ┆ str  ┆ i64 ┆ i64   ┆ str    │
+╞═════════╪═════════╪══════╪═════╪═══════╪════════╡
+│ 2       ┆ 20      ┆ 李四 ┆ 30  ┆ 85    ┆ 良好   │
+│ 2       ┆ 20      ┆ 李四 ┆ 30  ┆ 90    ┆ 优秀   │
+│ 2       ┆ 20      ┆ 李四 ┆ 30  ┆ 85    ┆ 良好   │
+│ 2       ┆ 20      ┆ 李四 ┆ 30  ┆ 90    ┆ 优秀   │
+│ 3       ┆ 30      ┆ 王五 ┆ 35  ┆ 88    ┆ 良好   │
+└─────────┴─────────┴──────┴─────┴───────┴────────┘
+左连接（多列匹配）结果:
+shape: (7, 6)
+┌─────────┬─────────┬──────┬─────┬───────┬────────┐
+│ user_id ┆ dept_id ┆ name ┆ age ┆ score ┆ review │
+│ ---     ┆ ---     ┆ ---  ┆ --- ┆ ---   ┆ ---    │
+│ i64     ┆ i64     ┆ str  ┆ i64 ┆ i64   ┆ str    │
+╞═════════╪═════════╪══════╪═════╪═══════╪════════╡
+│ 1       ┆ 10      ┆ 张三 ┆ 25  ┆ null  ┆ null   │
+│ 2       ┆ 20      ┆ 李四 ┆ 30  ┆ 85    ┆ 良好   │
+│ 2       ┆ 20      ┆ 李四 ┆ 30  ┆ 90    ┆ 优秀   │
+│ 2       ┆ 20      ┆ 李四 ┆ 30  ┆ 85    ┆ 良好   │
+│ 2       ┆ 20      ┆ 李四 ┆ 30  ┆ 90    ┆ 优秀   │
+│ 3       ┆ 30      ┆ 王五 ┆ 35  ┆ 88    ┆ 良好   │
+│ 4       ┆ 40      ┆ 赵六 ┆ 40  ┆ null  ┆ null   │
+└─────────┴─────────┴──────┴─────┴───────┴────────┘
+右连接（多列匹配）结果:
+shape: (6, 6)
+┌──────┬──────┬─────────┬─────────┬───────┬────────┐
+│ name ┆ age  ┆ user_id ┆ dept_id ┆ score ┆ review │
+│ ---  ┆ ---  ┆ ---     ┆ ---     ┆ ---   ┆ ---    │
+│ str  ┆ i64  ┆ i64     ┆ i64     ┆ i64   ┆ str    │
+╞══════╪══════╪═════════╪═════════╪═══════╪════════╡
+│ 李四 ┆ 30   ┆ 2       ┆ 20      ┆ 85    ┆ 良好   │
+│ 李四 ┆ 30   ┆ 2       ┆ 20      ┆ 85    ┆ 良好   │
+│ 李四 ┆ 30   ┆ 2       ┆ 20      ┆ 90    ┆ 优秀   │
+│ 李四 ┆ 30   ┆ 2       ┆ 20      ┆ 90    ┆ 优秀   │
+│ 王五 ┆ 35   ┆ 3       ┆ 30      ┆ 88    ┆ 良好   │
+│ null ┆ null ┆ 5       ┆ 50      ┆ 92    ┆ 优秀   │
+└──────┴──────┴─────────┴─────────┴───────┴────────┘
+```
 
 
 ## 文件操作
