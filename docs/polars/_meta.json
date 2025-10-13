@@ -10,6 +10,11 @@
     "label": "快速入门"
   },
   {
+    "type": "file",
+    "name": "basic_use.mdx",
+    "label": "基本使用"
+  },
+  {
     "type": "dir",
     "name": "concepts",
     "label": "概念",

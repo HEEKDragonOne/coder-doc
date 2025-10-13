@@ -1,0 +1,615 @@
+import {Badge} from '@theme';
+
+## 基本使用
+
+本章旨在帮助您通过 Polars 完成常用功能。
+
+
+## 数据准备
+```python title="Python"
+df = pl.DataFrame({
+    'id': [1, 2, 2, 3, 4, 5, None, 6],
+    'name': ['张三', '李四a', '李四b', '王五', '赵六', '钱七', '未知', '孙八'],
+    'value': [10.5, 20.3, 20.3, np.nan, 40.1, 1000.0, 60.8, 70.2],
+    'category': ['A', 'B', 'B', 'A', None, 'C', 'A', 'C'],
+    'date': [date(2023, 1, 1), date(2023, 1, 2), date(2023, 1, 2), date(2023, 1, 3),
+             date(2023, 1, 4), date(2023, 1, 5), None, date(2023, 1, 7)],
+    'flag': [True, False, False, True, True, None, False, True]
+})
+
+print(df.dtypes)
+```
+
+```text
+[Int64, String, Float64, String, Date, Boolean]
+```
+
+## 去重
+
+### 重复值处理
+
+> DataFrame.unique(
+subset: ColumnNameOrSelector | Collection[ColumnNameOrSelector] | None = None,
+*,
+keep: UniqueKeepStrategy = 'any',
+maintain_order: bool = False,
+) → DataFrame
+
+> - subset：参与判断的列。默认所有列。
+> - keep：保留策略。当有重复数据时，如何处理重复数据。 `any：`保留任意一个，默认值；`first：`保留第一个；`last：`保留最后一个；`none：`不保留；
+> - maintain_order：数据顺序是否按照原数据顺序，默认`False`。如果该值为`False`时，并且`keep`值为`first`，每一次执行保留的值会不一样；设置为`True`时，`keep`参数保留的结果才会符合预期。`但该参数在一定程度上影响性能。`
+
+```python title="Python"
+result = df.unique(subset=['id'], keep='last', maintain_order=True)
+print(result)
+```
+```text
+shape: (7, 6)
+┌──────┬───────┬────────┬──────────┬────────────┬───────┐
+│ id   ┆ name  ┆ value  ┆ category ┆ date       ┆ flag  │
+│ ---  ┆ ---   ┆ ---    ┆ ---      ┆ ---        ┆ ---   │
+│ i64  ┆ str   ┆ f64    ┆ str      ┆ date       ┆ bool  │
+╞══════╪═══════╪════════╪══════════╪════════════╪═══════╡
+│ 1    ┆ 张三  ┆ 10.5   ┆ A        ┆ 2023-01-01 ┆ true  │
+│ 2    ┆ 李四b ┆ 20.3   ┆ B        ┆ 2023-01-02 ┆ false │
+│ 3    ┆ 王五  ┆ NaN    ┆ A        ┆ 2023-01-03 ┆ true  │
+│ 4    ┆ 赵六  ┆ 40.1   ┆ null     ┆ 2023-01-04 ┆ true  │
+│ 5    ┆ 钱七  ┆ 1000.0 ┆ C        ┆ 2023-01-05 ┆ null  │
+│ null ┆ 未知  ┆ 60.8   ┆ A        ┆ null       ┆ false │
+│ 6    ┆ 孙八  ┆ 70.2   ┆ C        ┆ 2023-01-07 ┆ true  │
+└──────┴───────┴────────┴──────────┴────────────┴───────┘
+```
+
+### 判断重复行
+
+> DataFrame.is_unique() → Series
+
+统计的是所有列作为唯一值判断条件。
+
+```python title="Python"
+df2 = pl.DataFrame({
+    'id': [1, 2, 2, 3, 4, 5, None, 6],
+    'flag': [True, False, False, True, True, None, False, True]
+})
+result = df2.is_unique()
+print(result)
+```
+```text
+shape: (8,)
+Series: '' [bool]
+[
+	true
+	false
+	false
+	true
+	true
+	true
+	true
+	true
+]
+```
+
+### 统计唯一值个数
+
+> DataFrame.n_unique(subset: str | Expr | Sequence[str | Expr] | None = None) → int
+
+统计去重后的个数。
+
+```python title="Python"
+result = df.n_unique(subset=['id'])
+print(result)
+```
+```text
+7
+```
+
+```python
+df2 = pl.DataFrame({
+    'id': [1, 2, 2, 3, 4, 5, 6],
+    'value': [20.5, 20.3, 30.3, 60.1, 10.0, 60.8, 50.2],
+})
+result = df2.n_unique(subset=[((pl.col("value") / 10).cast(pl.Int64))])
+print(result)
+```
+```text
+5
+```
+
+
+## 特殊值处理
+
+### null值处理
+
+
+#### 填充null值
+
+使用指定的值或策略填充空值，选择其一即可。
+
+> DataFrame.fill_null(
+value: Any | Expr | None = None,
+strategy: FillNullStrategy | None = None,
+limit: int | None = None,
+*,
+matches_supertype: bool = True,
+) → DataFrame
+
+> - value：指定值进行填充替换null值。
+> - strategy：替换策略。forward：使用前一个非空值进行填充；backward：使用后一个非空值进行填充；min：使用最小值进行填充；max：使用最大值进行填充；mean：使用平均值进行填充；zero：使用0填充；one：使用1填充；
+> - limit：使用`forward`或`backward`策略时要填充的连续空值数，即不是所有null值都进行填充，只填充前n个或者后n个。
+
+
+##### 指定值填充
+
+```python title="Python"
+result = df.fill_null(value='fillv')
+print(result)
+```
+```text
+shape: (8, 6)
+┌──────┬───────┬────────┬──────────┬────────────┬───────┐
+│ id   ┆ name  ┆ value  ┆ category ┆ date       ┆ flag  │
+│ ---  ┆ ---   ┆ ---    ┆ ---      ┆ ---        ┆ ---   │
+│ i64  ┆ str   ┆ f64    ┆ str      ┆ date       ┆ bool  │
+╞══════╪═══════╪════════╪══════════╪════════════╪═══════╡
+│ 1    ┆ 张三  ┆ 10.5   ┆ A        ┆ 2023-01-01 ┆ true  │
+│ 2    ┆ 李四a ┆ 20.3   ┆ B        ┆ 2023-01-02 ┆ false │
+│ 2    ┆ 李四b ┆ 20.3   ┆ B        ┆ 2023-01-02 ┆ false │
+│ 3    ┆ 王五  ┆ NaN    ┆ A        ┆ 2023-01-03 ┆ true  │
+│ 4    ┆ 赵六  ┆ 40.1   ┆ fillv    ┆ 2023-01-04 ┆ true  │
+│ 5    ┆ 钱七  ┆ 1000.0 ┆ C        ┆ 2023-01-05 ┆ null  │
+│ null ┆ 未知  ┆ 60.8   ┆ A        ┆ null       ┆ false │
+│ 6    ┆ 孙八  ┆ 70.2   ┆ C        ┆ 2023-01-07 ┆ true  │
+└──────┴───────┴────────┴──────────┴────────────┴───────┘
+```
+
+:::tip 提示
+
+通过上面的示例中也可以看出，这种指定值的方式，只能填充给定的值的数据类型的null值，其他类型的null值并没有进行填充。
+
+:::
+
+##### 指定策略填充
+
+```python title="Python"
+result = df.fill_null(strategy='forward')
+print(result)
+```
+```text
+shape: (8, 6)
+┌─────┬───────┬────────┬──────────┬────────────┬───────┐
+│ id  ┆ name  ┆ value  ┆ category ┆ date       ┆ flag  │
+│ --- ┆ ---   ┆ ---    ┆ ---      ┆ ---        ┆ ---   │
+│ i64 ┆ str   ┆ f64    ┆ str      ┆ date       ┆ bool  │
+╞═════╪═══════╪════════╪══════════╪════════════╪═══════╡
+│ 1   ┆ 张三  ┆ 10.5   ┆ A        ┆ 2023-01-01 ┆ true  │
+│ 2   ┆ 李四a ┆ 20.3   ┆ B        ┆ 2023-01-02 ┆ false │
+│ 2   ┆ 李四b ┆ 20.3   ┆ B        ┆ 2023-01-02 ┆ false │
+│ 3   ┆ 王五  ┆ NaN    ┆ A        ┆ 2023-01-03 ┆ true  │
+│ 4   ┆ 赵六  ┆ 40.1   ┆ A        ┆ 2023-01-04 ┆ true  │
+│ 5   ┆ 钱七  ┆ 1000.0 ┆ C        ┆ 2023-01-05 ┆ true  │
+│ 5   ┆ 未知  ┆ 60.8   ┆ A        ┆ 2023-01-05 ┆ false │
+│ 6   ┆ 孙八  ┆ 70.2   ┆ C        ┆ 2023-01-07 ┆ true  │
+└─────┴───────┴────────┴──────────┴────────────┴───────┘
+```
+
+> 使用limit限制
+
+```python title="Python"
+df2 = pl.DataFrame({
+    'id': [1, 2, 3, None, None, None, None, None, 6],
+})
+
+result1 = df2.fill_null(strategy='forward')
+print(result1)
+result2 = df2.fill_null(strategy='forward', limit=3)
+print(result2)
+```
+```text {10-14,26-30}
+shape: (9, 1)
+┌─────┐
+│ id  │
+│ --- │
+│ i64 │
+╞═════╡
+│ 1   │
+│ 2   │
+│ 3   │
+│ 3   │
+│ 3   │
+│ 3   │
+│ 3   │
+│ 3   │
+│ 6   │
+└─────┘
+shape: (9, 1)
+┌──────┐
+│ id   │
+│ ---  │
+│ i64  │
+╞══════╡
+│ 1    │
+│ 2    │
+│ 3    │
+│ 3    │
+│ 3    │
+│ 3    │
+│ null │
+│ null │
+│ 6    │
+└──────┘
+```
+
+
+#### 统计null值
+
+> Series.null_count() → int
+
+```python title="Python"
+result = df.null_count()
+print(result)
+```
+```text
+shape: (1, 6)
+┌─────┬──────┬───────┬──────────┬──────┬──────┐
+│ id  ┆ name ┆ value ┆ category ┆ date ┆ flag │
+│ --- ┆ ---  ┆ ---   ┆ ---      ┆ ---  ┆ ---  │
+│ u32 ┆ u32  ┆ u32   ┆ u32      ┆ u32  ┆ u32  │
+╞═════╪══════╪═══════╪══════════╪══════╪══════╡
+│ 1   ┆ 0    ┆ 0     ┆ 1        ┆ 1    ┆ 1    │
+└─────┴──────┴───────┴──────────┴──────┴──────┘
+```
+
+#### 删除null值行
+
+> DataFrame.drop_nulls(
+subset: ColumnNameOrSelector | Collection[ColumnNameOrSelector] | None = None,
+) → DataFrame
+
+> - subset：参与判断的列，默认所有列。
+
+
+```python title="Python"
+result = df.drop_nulls()
+print(result)
+```
+```text
+shape: (5, 6)
+┌─────┬───────┬───────┬──────────┬────────────┬───────┐
+│ id  ┆ name  ┆ value ┆ category ┆ date       ┆ flag  │
+│ --- ┆ ---   ┆ ---   ┆ ---      ┆ ---        ┆ ---   │
+│ i64 ┆ str   ┆ f64   ┆ str      ┆ date       ┆ bool  │
+╞═════╪═══════╪═══════╪══════════╪════════════╪═══════╡
+│ 1   ┆ 张三  ┆ 10.5  ┆ A        ┆ 2023-01-01 ┆ true  │
+│ 2   ┆ 李四a ┆ 20.3  ┆ B        ┆ 2023-01-02 ┆ false │
+│ 2   ┆ 李四b ┆ 20.3  ┆ B        ┆ 2023-01-02 ┆ false │
+│ 3   ┆ 王五  ┆ NaN   ┆ A        ┆ 2023-01-03 ┆ true  │
+│ 6   ┆ 孙八  ┆ 70.2  ┆ C        ┆ 2023-01-07 ┆ true  │
+└─────┴───────┴───────┴──────────┴────────────┴───────┘
+```
+
+```python title="Python"
+result = df.drop_nulls(subset=['id', 'name'])
+print(result)
+```
+```text
+shape: (7, 6)
+┌─────┬───────┬────────┬──────────┬────────────┬───────┐
+│ id  ┆ name  ┆ value  ┆ category ┆ date       ┆ flag  │
+│ --- ┆ ---   ┆ ---    ┆ ---      ┆ ---        ┆ ---   │
+│ i64 ┆ str   ┆ f64    ┆ str      ┆ date       ┆ bool  │
+╞═════╪═══════╪════════╪══════════╪════════════╪═══════╡
+│ 1   ┆ 张三  ┆ 10.5   ┆ A        ┆ 2023-01-01 ┆ true  │
+│ 2   ┆ 李四a ┆ 20.3   ┆ B        ┆ 2023-01-02 ┆ false │
+│ 2   ┆ 李四b ┆ 20.3   ┆ B        ┆ 2023-01-02 ┆ false │
+│ 3   ┆ 王五  ┆ NaN    ┆ A        ┆ 2023-01-03 ┆ true  │
+│ 4   ┆ 赵六  ┆ 40.1   ┆ null     ┆ 2023-01-04 ┆ true  │
+│ 5   ┆ 钱七  ┆ 1000.0 ┆ C        ┆ 2023-01-05 ┆ null  │
+│ 6   ┆ 孙八  ┆ 70.2   ┆ C        ┆ 2023-01-07 ┆ true  │
+└─────┴───────┴────────┴──────────┴────────────┴───────┘
+```
+
+
+### nan值处理
+
+与处理null值的方法类似。
+
+#### 填充nan值
+
+> DataFrame.fill_nan(value: Expr | int | float | None) → DataFrame
+
+
+```python title="Python"
+result = df.fill_nan(777)
+print(result)
+```
+```text
+shape: (8, 6)
+┌──────┬───────┬────────┬──────────┬────────────┬───────┐
+│ id   ┆ name  ┆ value  ┆ category ┆ date       ┆ flag  │
+│ ---  ┆ ---   ┆ ---    ┆ ---      ┆ ---        ┆ ---   │
+│ i64  ┆ str   ┆ f64    ┆ str      ┆ date       ┆ bool  │
+╞══════╪═══════╪════════╪══════════╪════════════╪═══════╡
+│ 1    ┆ 张三  ┆ 10.5   ┆ A        ┆ 2023-01-01 ┆ true  │
+│ 2    ┆ 李四a ┆ 20.3   ┆ B        ┆ 2023-01-02 ┆ false │
+│ 2    ┆ 李四b ┆ 20.3   ┆ B        ┆ 2023-01-02 ┆ false │
+│ 3    ┆ 王五  ┆ 777.0  ┆ A        ┆ 2023-01-03 ┆ true  │
+│ 4    ┆ 赵六  ┆ 40.1   ┆ null     ┆ 2023-01-04 ┆ true  │
+│ 5    ┆ 钱七  ┆ 1000.0 ┆ C        ┆ 2023-01-05 ┆ null  │
+│ null ┆ 未知  ┆ 60.8   ┆ A        ┆ null       ┆ false │
+│ 6    ┆ 孙八  ┆ 70.2   ┆ C        ┆ 2023-01-07 ┆ true  │
+└──────┴───────┴────────┴──────────┴────────────┴───────┘
+```
+
+#### 删除nan值行
+
+> DataFrame.drop_nans(
+subset: ColumnNameOrSelector | Collection[ColumnNameOrSelector] | None = None,
+) → DataFrame
+
+```python title="Python"
+result = df.drop_nans(subset=['id', 'value'])
+print(result)
+```
+```text
+shape: (7, 6)
+┌──────┬───────┬────────┬──────────┬────────────┬───────┐
+│ id   ┆ name  ┆ value  ┆ category ┆ date       ┆ flag  │
+│ ---  ┆ ---   ┆ ---    ┆ ---      ┆ ---        ┆ ---   │
+│ i64  ┆ str   ┆ f64    ┆ str      ┆ date       ┆ bool  │
+╞══════╪═══════╪════════╪══════════╪════════════╪═══════╡
+│ 1    ┆ 张三  ┆ 10.5   ┆ A        ┆ 2023-01-01 ┆ true  │
+│ 2    ┆ 李四a ┆ 20.3   ┆ B        ┆ 2023-01-02 ┆ false │
+│ 2    ┆ 李四b ┆ 20.3   ┆ B        ┆ 2023-01-02 ┆ false │
+│ 4    ┆ 赵六  ┆ 40.1   ┆ null     ┆ 2023-01-04 ┆ true  │
+│ 5    ┆ 钱七  ┆ 1000.0 ┆ C        ┆ 2023-01-05 ┆ null  │
+│ null ┆ 未知  ┆ 60.8   ┆ A        ┆ null       ┆ false │
+│ 6    ┆ 孙八  ┆ 70.2   ┆ C        ┆ 2023-01-07 ┆ true  │
+└──────┴───────┴────────┴──────────┴────────────┴───────┘
+```
+
+:::tip
+
+处理nan值的方法相比于处理null值的方法要少，所以在处理nan时，可以先将其处理成null值，再按照null值的处理方式进行处理，如下所示：
+```python title="Python"
+result = df.fill_nan(None)
+print(result)
+```
+```text {10}
+shape: (8, 6)
+┌──────┬───────┬────────┬──────────┬────────────┬───────┐
+│ id   ┆ name  ┆ value  ┆ category ┆ date       ┆ flag  │
+│ ---  ┆ ---   ┆ ---    ┆ ---      ┆ ---        ┆ ---   │
+│ i64  ┆ str   ┆ f64    ┆ str      ┆ date       ┆ bool  │
+╞══════╪═══════╪════════╪══════════╪════════════╪═══════╡
+│ 1    ┆ 张三  ┆ 10.5   ┆ A        ┆ 2023-01-01 ┆ true  │
+│ 2    ┆ 李四a ┆ 20.3   ┆ B        ┆ 2023-01-02 ┆ false │
+│ 2    ┆ 李四b ┆ 20.3   ┆ B        ┆ 2023-01-02 ┆ false │
+│ 3    ┆ 王五  ┆ null   ┆ A        ┆ 2023-01-03 ┆ true  │
+│ 4    ┆ 赵六  ┆ 40.1   ┆ null     ┆ 2023-01-04 ┆ true  │
+│ 5    ┆ 钱七  ┆ 1000.0 ┆ C        ┆ 2023-01-05 ┆ null  │
+│ null ┆ 未知  ┆ 60.8   ┆ A        ┆ null       ┆ false │
+│ 6    ┆ 孙八  ┆ 70.2   ┆ C        ┆ 2023-01-07 ┆ true  │
+└──────┴───────┴────────┴──────────┴────────────┴───────┘
+```
+
+这样，原本`value`列中为nan值的数据就被处理成了null值，接下来就可以按照处理null值的方式进行处理。
+
+:::
+
+
+## 拼接数据
+
+<Badge>
+    <img
+        style={{height: '18px'}}
+        src="/rspress-logo.png"
+    />
+    <span>[concat](https://docs.pola.rs/api/python/stable/reference/api/polars.concat.html)</span>
+</Badge>
+
+> polars.concat(
+items: Iterable[PolarsType],
+*,
+how: ConcatMethod = 'vertical',
+rechunk: bool = False,
+parallel: bool = True,
+) → PolarsType
+
+主要的是以下两个参数：
+> - items：参与拼接的多个对象。请注意，Series仅支持垂直策略(vertical)。所以，一般都是DataFrame对象。
+> - how：拼接方式，默认垂直拼接(vertical)。这里只介绍几种常用的，其他参考官方接口。vertical：垂直合并；horizontal：水平合并；diagonal：对角线合并。
+
+
+### 垂直拼接
+
+使用concat函数和how="vertical"参数即可, 但是要注意, 如果没有相同的列名, 则会报错(比如一个3列一个2列, 或者都是2列但是列名不完全相同)。
+
+```python title="Python"
+df1 = pl.DataFrame({
+    'id': [1, 2, 3],
+    'name': ['张三', '李四', '王五'],
+    'category': ['A', 'B', 'A'],
+    'flag': [True, False, True]
+})
+
+df2 = pl.DataFrame({
+
+    'id': [4, 5, 6],
+    'name': ['赵六', '钱七', '孙八'],
+    'category': ['C', 'A', 'C'],
+    'flag': [True, False, True]
+})
+
+result = pl.concat([df1, df2])
+print(result)
+```
+```text
+shape: (6, 4)
+┌─────┬──────┬──────────┬───────┐
+│ id  ┆ name ┆ category ┆ flag  │
+│ --- ┆ ---  ┆ ---      ┆ ---   │
+│ i64 ┆ str  ┆ str      ┆ bool  │
+╞═════╪══════╪══════════╪═══════╡
+│ 1   ┆ 张三 ┆ A        ┆ true  │
+│ 2   ┆ 李四 ┆ B        ┆ false │
+│ 3   ┆ 王五 ┆ A        ┆ true  │
+│ 4   ┆ 赵六 ┆ C        ┆ true  │
+│ 5   ┆ 钱七 ┆ A        ┆ false │
+│ 6   ┆ 孙八 ┆ C        ┆ true  │
+└─────┴──────┴──────────┴───────┘
+```
+
+
+### 水平拼接
+
+水平拼接时，如果包含相同的列名则会报错。多个对象的行数可以不一致，默认会使用null来填充。
+
+```python title="Python"
+df1 = pl.DataFrame({
+    'id': [1, 2, 3],
+    'name': ['张三', '李四', '王五'],
+    'category': ['A', 'B', 'A'],
+    'flag': [True, False, True]
+})
+
+df3 = pl.DataFrame({
+    'value': [10.5, 20.3, 20.3, 40.1, 1000.0, 60.8, 70.2],
+    'date': [date(2023, 1, 1), date(2023, 1, 2), date(2023, 1, 2), date(2023, 1, 3),
+             date(2023, 1, 4), date(2023, 1, 5), date(2023, 1, 7)],
+})
+
+result = pl.concat([df1, df3], how='horizontal')
+print(result)
+```
+```text
+shape: (7, 6)
+┌──────┬──────┬──────────┬───────┬────────┬────────────┐
+│ id   ┆ name ┆ category ┆ flag  ┆ value  ┆ date       │
+│ ---  ┆ ---  ┆ ---      ┆ ---   ┆ ---    ┆ ---        │
+│ i64  ┆ str  ┆ str      ┆ bool  ┆ f64    ┆ date       │
+╞══════╪══════╪══════════╪═══════╪════════╪════════════╡
+│ 1    ┆ 张三 ┆ A        ┆ true  ┆ 10.5   ┆ 2023-01-01 │
+│ 2    ┆ 李四 ┆ B        ┆ false ┆ 20.3   ┆ 2023-01-02 │
+│ 3    ┆ 王五 ┆ A        ┆ true  ┆ 20.3   ┆ 2023-01-02 │
+│ null ┆ null ┆ null     ┆ null  ┆ 40.1   ┆ 2023-01-03 │
+│ null ┆ null ┆ null     ┆ null  ┆ 1000.0 ┆ 2023-01-04 │
+│ null ┆ null ┆ null     ┆ null  ┆ 60.8   ┆ 2023-01-05 │
+│ null ┆ null ┆ null     ┆ null  ┆ 70.2   ┆ 2023-01-07 │
+└──────┴──────┴──────────┴───────┴────────┴────────────┘
+```
+
+
+### 对角线拼接
+
+新生成的DataFrame会更长或更宽。如果存在相同列，则该列会增加行。
+
+```python title="Python"
+df1 = pl.DataFrame({
+    'id': [1, 2, 3],
+    'flag': [True, False, True]
+})
+
+df2 = pl.DataFrame({
+    'id': [4, 5, 6, 1],
+    'flag': [True, False, True, True],
+    'value': [10.5, 20.3, 20.3, 70.2],
+})
+
+result = pl.concat([df1, df2], how='diagonal')
+print(result)
+```
+```text
+shape: (7, 3)
+┌─────┬───────┬───────┐
+│ id  ┆ flag  ┆ value │
+│ --- ┆ ---   ┆ ---   │
+│ i64 ┆ bool  ┆ f64   │
+╞═════╪═══════╪═══════╡
+│ 1   ┆ true  ┆ null  │
+│ 2   ┆ false ┆ null  │
+│ 3   ┆ true  ┆ null  │
+│ 4   ┆ true  ┆ 10.5  │
+│ 5   ┆ false ┆ 20.3  │
+│ 6   ┆ true  ┆ 20.3  │
+│ 1   ┆ true  ┆ 70.2  │
+└─────┴───────┴───────┘
+```
+
+## 关联数据
+
+<Badge>
+    <img
+        style={{height: '18px'}}
+        src="/rspress-logo.png"
+    />
+    <span>[join](https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.join.html)</span>
+</Badge>
+
+> DataFrame.join(
+other: DataFrame,
+on: str | Expr | Sequence[str | Expr] | None = None,
+how: JoinStrategy = 'inner',
+*,
+left_on: str | Expr | Sequence[str | Expr] | None = None,
+right_on: str | Expr | Sequence[str | Expr] | None = None,
+suffix: str = '_right',
+validate: JoinValidation = 'm:m',
+nulls_equal: bool = False,
+coalesce: bool | None = None,
+maintain_order: MaintainOrderJoin | None = None,
+) → DataFrame
+
+> - other：待关联对象。
+> - on：关联列名。与`left_on`和`right_on`不可同时存在。
+> - how：关联方式，默认内连接(inner)。inner、left、right、full、semi、anti、cross。
+> - left_on：左侧DataFrame中进行关联的列名称。与`on`不可同时存在。
+> - right_on：右侧DataFrame中进行关联的列名称。与`on`不可同时存在。
+> - suffix：当存在重复列时，右侧列中重复的列名将会添加该参数值作为后缀。默认：`_right`。
+> - coalesce：当存在重复列时，是否合并重复列。
+> - maintain_order：合并后的数据的排序方式。`left`：按照左侧DataFrame顺序； `right`：按照右侧DataFrame顺序； `left_right`：先按照左侧再按照右侧, `right_left`：先按照右侧再按照左侧。
+
+
+### 数据准备
+
+```python title="Python"
+df1 = pl.DataFrame(
+    {
+        "foo": [1, 2, 3],
+        "bar": [6.0, 7.0, 8.0],
+        "ham": ["a", "b", "c"],
+    }
+)
+
+df2 = pl.DataFrame(
+    {
+        "apple": ["x", "y", "z"],
+        "ham": ["a", "b", "d"],
+    }
+)
+```
+
+
+### 内连接
+
+### 左连接
+
+### 右连接
+
+### 全连接
+
+### 半连接
+
+### 反连接
+
+### 笛卡尔积
+
+
+
+
+
+## 文件操作
+
+
+
+## 常用方法
+
