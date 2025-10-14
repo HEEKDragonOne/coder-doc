@@ -839,9 +839,51 @@ shape: (6, 6)
 ```
 
 
-## 文件操作
+## IO操作
+
+### 文件操作
+
+读取文件和写入文件是两个相对通用的方法，也很简单，这里列一些常用的文件：
+
+- 读取文件：`pl.read_csv("data.csv")`
+- 写入文件：`df.write_csv("data.csv")`
+- 读取Excel：`pl.read_excel("data.xlsx")`
+- 写入Excel：`df.write_excel("data.xlsx")`
+- 读取JSON：`pl.read_json("data.json")`
+- 写入JSON：`df.write_json("data.json")`
+- 读取Parquet：`pl.read_parquet("data.parquet")`
+- 写入Parquet：`df.write_parquet("data.parquet")`
+
+::: warning
+
+需要注意的是，在写入或者读取文件时，对于部分文件还需要安装对应的依赖包，比如Excel需要额外安装`fastexcel xlsx2csv openpyxl xlsxwriter`等依赖。
+
+:::
 
 
+### 数据库操作
+
+#### 读取数据库
+
+```python title="Python"
+uri = "postgresql://username:password@server:port/database"
+query = "SELECT * FROM foo"
+pl.read_database_uri(query=query, uri=uri)
+
+
+from sqlalchemy import create_engine
+conn = create_engine(f"sqlite:///test.db")
+query = "SELECT * FROM foo"
+pl.read_database(query=query, connection=conn.connect())
+```
+
+#### 写入数据库
+
+```python title="Python"
+uri = "postgresql://username:password@server:port/database"
+df = pl.DataFrame({"foo": [1, 2, 3]})
+df.write_database(table_name="records",  connection=uri)
+```
 
 ## 常用方法
 
