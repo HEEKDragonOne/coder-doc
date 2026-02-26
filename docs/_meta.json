@@ -23,5 +23,15 @@
         "activeMatch": "/scripts/"
       }
     ]
+  },
+  {
+    "text": "知识库",
+    "items": [
+      {
+        "text": "SQL",
+        "link": "/sql/",
+        "activeMatch": "/sql/"
+      }
+    ]
   }
 ]

@@ -16,13 +16,13 @@ export default defineConfig({
     cleanUrls: false,
   },
   themeConfig: {
-    socialLinks: [
-      {
-        icon: 'github',
-        mode: 'link',
-        content: 'https://github.com/HEEKDragonOne/coder-doc',
-      }
-    ],
+    // socialLinks: [
+    //   {
+    //     icon: 'github',
+    //     mode: 'link',
+    //     content: 'https://github.com/HEEKDragonOne/coder-doc',
+    //   }
+    // ],
     // 导航栏显示设置
     hideNavbar: 'auto',
     outlineTitle: '目录',
@@ -33,11 +33,11 @@ export default defineConfig({
     enableAppearanceAnimation: true,
     outline: true,
     lastUpdated: true,
-    lastUpdatedText: "上次更新时间",
-    editLink: {
-      text:"📝在 GitHub 上编辑此页",
-      docRepoBaseUrl: "https://github.com/HEEKDragonOne/coder-doc",
-    },
+    lastUpdatedText: "最后更新时间",
+    // editLink: {
+    //   text:"📝在 GitHub 上编辑此页",
+    //   docRepoBaseUrl: "https://github.com/HEEKDragonOne/coder-doc",
+    // },
   },
   search: {
     codeBlocks: true,
